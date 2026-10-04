@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Everything Vehicle: Your Ultimate Guide to Understand Your Customers</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --surface-0: #f5f3f0;
+      --surface-1: #faf9f8;
+      --surface-2: #ffffff;
+      --text-primary: #2c2c2a;
+      --text-secondary: #888780;
+      --text-muted: #b4b2a9;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.12);
+      --fill-accent: #378add;
+      --bg-accent: #e6f1fb;
+      --text-accent: #185fa5;
+      --bg-success: #eaf3de;
+      --border-success: #639922;
+      --radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --surface-0: #2c2c2a;
+        --surface-1: #44423f;
+        --surface-2: #5a5854;
+        --text-primary: #f5f3f0;
+        --text-secondary: #b4b2a9;
+        --text-muted: #888780;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-strong: rgba(255, 255, 255, 0.12);
+        --fill-accent: #85b7eb;
+        --bg-accent: #0c447c;
+        --text-accent: #b5d4f4;
+        --bg-success: #27500a;
+        --border-success: #97c459;
+      }
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--surface-0);
+      color: var(--text-primary);
+    }
+
+    body {
+      padding: 20px;
+    }
+
+    .header {
+      max-width: 800px;
+      margin: 0 auto 30px;
+      padding: 24px 20px 20px;
+      background: #1e5fbf;
+      border-radius: 12px;
+      border-bottom: none;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease-out;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    .assessment-btn-wrap {
+      max-width: 800px;
+      margin: 0 auto 20px;
+      text-align: center;
+    }
+
+    .assessment-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 22px;
+      background: var(--fill-accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .assessment-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .progress-bar {
+      background: var(--surface-1);
+      border-radius: 4px;
+      height: 6px;
+      margin-bottom: 30px;
+      overflow: hidden;
+      border: 0.5px solid var(--border);
+    }
+
+    .progress-fill {
+      background: var(--fill-accent);
+      height: 100%;
+      transition: width 0.3s ease-out;
+    }
+
+    .tab-nav {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    @media (max-width: 600px) {
+      .tab-nav {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tab-btn {
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s ease-out;
+    }
+
+    .tab-btn:hover {
+      background: var(--surface-1);
+    }
+
+    .tab-btn.active {
+      background: var(--surface-2);
+      border: 0.5px solid var(--border-strong);
+      color: var(--text-primary);
+      box-shadow: 0 0 0 3px var(--bg-accent);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      padding: 8px 0;
+    }
+
+    .section-header i {
+      font-size: 20px;
+    }
+
+    .section-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .service-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .service-card {
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: all 0.15s ease-out;
+    }
+
+    .service-card:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    .service-header {
+      padding: 12px 16px;
+      background: var(--surface-1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .service-header:hover {
+      background: var(--surface-2);
+    }
+
+    .service-title {
+      flex: 1;
+    }
+
+    .service-title h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .service-title p {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .toggle-icon {
+      color: var(--text-secondary);
+      font-size: 16px;
+      transition: transform 0.2s ease-out;
+    }
+
+    .service-card.expanded .toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .service-details {
+      padding: 16px;
+      border-top: 0.5px solid var(--border);
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      display: none;
+    }
+
+    .service-card.expanded .service-details {
+      display: block;
+    }
+
+    .key-points {
+      background: var(--bg-accent);
+      border-left: 3px solid var(--fill-accent);
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--text-primary);
+      margin: 16px 0;
+    }
+
+    .key-points strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .content-section {
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .content-section h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .content-section h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 18px 0 10px 0;
+      color: var(--text-primary);
+    }
+
+    .content-section p {
+      margin-bottom: 12px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .content-section ul {
+      margin: 12px 0 12px 24px;
+      color: var(--text-secondary);
+    }
+
+    .content-section li {
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+
+    .expandable-section {
+      background: var(--surface-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .expandable-header {
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--surface-1);
+    }
+
+    .expandable-header:hover {
+      background: var(--surface-2);
+    }
+
+    .expandable-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .expandable-toggle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      transition: transform 0.2s ease-out;
+    }
+
+    .expandable-section.expanded .expandable-toggle {
+      transform: rotate(180deg);
+    }
+
+    .expandable-content {
+      padding: 16px;
+      border-top: 0.5px solid var(--border);
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      display: none;
+    }
+
+    .expandable-section.expanded .expandable-content {
+      display: block;
+    }
+
+    .expandable-content h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 16px 0 8px 0;
+    }
+
+    .expandable-content p {
+      margin-bottom: 12px;
+    }
+
+    .expandable-content ul {
+      margin: 12px 0 12px 24px;
+    }
+
+    .expandable-content li {
+      margin-bottom: 6px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Everything Vehicle: Your Ultimate Guide to Understand Your Customers</h1>
+    <p>Auto Services & Car Parts Knowledge</p>
+    <button class="back-btn" onclick="history.go(-2)">← Back to Modules Tab</button>
+  </div>
+
+  <div class="assessment-btn-wrap">
+    <a class="assessment-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform" target="_blank" rel="noopener noreferrer">
+      <i class="fas fa-clipboard-check"></i>
+      Take the Car Knowledge Assessment
+    </a>
+  </div>
+
+  <div class="container">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress" style="width: 0%"></div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="showTab('services')">Auto Services</button>
+      <button class="tab-btn" onclick="showTab('parts')">Car Parts & Brands</button>
+    </div>
+
+    <!-- AUTO SERVICES TAB -->
+    <div id="services" class="tab-content active">
+      <div class="section">
+        <div class="section-header">
+          <i class="fas fa-tools"></i>
+          Nine Common Auto Services
+        </div>
+        <div class="section-description">
+          Learn about the services offered at the service center. Click each service to expand details.
+        </div>
+        <div class="service-grid" id="servicesGrid"></div>
+      </div>
+    </div>
+
+    <!-- CAR PARTS TAB -->
+    <div id="parts" class="tab-content">
+      <div class="expandable-section expanded">
+        <div class="expandable-header" onclick="toggleExpandable(this)">
+          <h3>Introduction to Car Parts</h3>
+          <i class="fas fa-chevron-down expandable-toggle"></i>
+        </div>
+        <div class="expandable-content">
+          <img src="assets/parts-of-a-car-diagram.png" alt="Parts of a Car" style="width: 100%; max-width: 100%; height: auto; border-radius: 6px; margin-bottom: 16px;">
+          <ul>
+            <li><strong>Engine:</strong> The heart of the vehicle</li>
+            <li><strong>Transmission:</strong> Transfers power from engine to wheels</li>
+            <li><strong>Battery:</strong> Provides electrical power</li>
+            <li><strong>Oil filter:</strong> Filters the engine oil</li>
+            <li><strong>Brake pads & rotors:</strong> Stopping system</li>
+            <li><strong>Suspension:</strong> Keeps ride smooth and stable</li>
+            <li><strong>Radiator:</strong> Cools the engine</li>
+            <li><strong>Alternator:</strong> Charges the battery</li>
+          </ul>
+          <div class="key-points">
+            <strong>Important:</strong> Engine oil and transmission oil are NOT the same. Always clarify which fluid the customer is asking about.
+          </div>
+
+          <div style="margin-top: 16px;">
+            <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Car Anatomy</h4>
+            <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+              <source src="https://dealerfocus-training.netlify.app/assets/car-anatomy-3d.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">More Knowledge about Vehicle Parts</h4>
+            <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+              <source src="https://dealerfocus-training.netlify.app/assets/more-knowledge-vehicle-parts.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      </div>
+
+      <div class="expandable-section expanded">
+        <div class="expandable-header" onclick="toggleExpandable(this)">
+          <h3>Vehicle Make and Model</h3>
+          <i class="fas fa-chevron-down expandable-toggle"></i>
+        </div>
+        <div class="expandable-content">
+          <h4>Make vs. Model</h4>
+          <p><strong>Make</strong> refers to the brand of the vehicle (Honda, Toyota, Ford, BMW, etc.).</p>
+          <p><strong>Model</strong> refers to the specific vehicle model (Civic, Camry, F-150, 3 Series, etc.).</p>
+          <div class="key-points">
+            <strong>Example:</strong> A 2023 Toyota Camry — "Toyota" is the make, "Camry" is the model.
+          </div>
+
+          <h4 style="margin-top: 20px;">Common Vehicle Make</h4>
+          <p>Click a brand below to see its common models.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin: 16px 0;" id="makeGrid"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>DealerFocus Training Module | Vehicle 101</p>
+  </div>
+
+  <script>
+    const services = [
+      {
+        id: 1,
+        title: "Normal Maintenance",
+        desc: "Oil changes, tire rotation, fluid checks",
+        details: "Car maintenance includes changing the oil, rotating the tires, checking the fluids, and more. Customers can also use express services for quick oil changes, bulb changes, and wiper blade replacements. Multi-point inspections provide a visual check of the entire vehicle.",
+        hasVideo: true,
+        hasExpandedContent: true
+      },
+      {
+        id: 2,
+        title: "Service by Mileage",
+        desc: "Maintenance due, yearly service, recommended service",
+        details: "Also known as Maintenance Due, Service Due, Yearly Service, or Recommended Service. Newer cars display messages on dashboards. Honda/Acura show 'Maintenance due soon.' Toyota shows 'MAINTENANCE REQUIRED' after 5,000 miles of driving.",
+        hasExpandedContent: true
+      },
+      {
+        id: 3,
+        title: "Diagnostic",
+        desc: "Check engine light, electrical issues, noises",
+        details: "Using specialized software and diagnostic tools to identify problem areas. Treat as diagnostic and follow dealership procedure: Check Engine light, ABS light, suspension issues, transmission diagnostics, vehicle pulling, noises, fluid leaks, brakes squeaking, car not starting, recalls, and steering issues.",
+        hasExpandedContent: true
+      },
+      {
+        id: 4,
+        title: "Accessory",
+        desc: "Car alarms, rain guards, rims, roof racks",
+        details: "Accessories are equipment that's not essential but enhances function or appearance. Examples: rain guards, auto starter installation, rims, car alarms, mud flaps and running boards, tinted windows, roof racks, and trailer hitches.",
+        hasExpandedContent: true
+      },
+      {
+        id: 5,
+        title: "Recall",
+        desc: "Service campaigns, safety defect remedy",
+        details: "Issued when manufacturer or NHTSA determines a vehicle creates unreasonable safety risk. Can look up recalls by VIN on NHTSA page. Most decisions are made voluntarily by manufacturers. Dealership policy determines if recalls can be booked.",
+        hasExpandedContent: true
+      },
+      {
+        id: 6,
+        title: "State Inspection Sticker",
+        desc: "Safety and emissions testing",
+        details: "Vehicle inspection mandated by government to ensure conformity with safety and emissions regulations. Some states require emission testing with state inspection. Display month and year. Follow dealership policy for emission test requirements in your state.",
+        hasExpandedContent: true
+      },
+      {
+        id: 7,
+        title: "Transportation",
+        desc: "Shuttle, loaner car, rental car, valet",
+        details: "Ways to help customers while vehicle is in shop. Shuttle: drives customer to/from work or home within a mile radius. Loaner car: complimentary or credit card required (varies by dealership). Rental car: through Alamo, Enterprise, etc. Valet: pick-up and delivery service at most dealerships.",
+        hasExpandedContent: true
+      },
+      {
+        id: 8,
+        title: "Tires",
+        desc: "Tire rotation, alignment, new tires, repairs",
+        details: "Wheel service includes new tires with balancing/alignment, inspection of shocks and struts, tire rotation to extend lifespan, and wheel removal for brake checks. Tire repair: addressing nails, slow leaks, or flat tires. Get tire brand and size from customer (e.g., Michelin 235/45/R17).",
+        hasExpandedContent: true
+      },
+      {
+        id: 9,
+        title: "Glass Service",
+        desc: "Windshield, windows, mirrors",
+        details: "Replacement of front windshield, rear windshield, or broken door windows. Side mirror and rear view mirror follow accessory policy. Dealerships may also offer body shop, detailing, car wash, key replacement, towing, and other services.",
+        hasExpandedContent: true
+      }
+    ];
+
+    function buildServices() {
+      const grid = document.getElementById('servicesGrid');
+      services.forEach(service => {
+        const card = document.createElement('div');
+        card.className = 'service-card';
+        
+        let detailsHTML = `<p>${service.details}</p>`;
+        
+        if (service.hasExpandedContent && service.id === 1) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <p style="margin-top: 14px; color: var(--text-secondary);">Sometimes the Dealerships allow for car maintenance to be done on an express level where the customer can walk-in, see the Dealership policy under Express Services for a list of items.</p>
+            
+            <ul style="margin: 12px 0 12px 24px; color: var(--text-secondary); list-style-type: none; padding-left: 0;">
+              <li style="margin-bottom: 8px; margin-left: 24px;">Oil Change & Filter change</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Bulb Change</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Wiper Blade Replacement</li>
+              <li style="margin-bottom: 12px; margin-left: 24px;">Multi-point Inspection (Visual check of entire vehicle)</li>
+              <div style="margin-bottom: 16px;">
+                <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Toyota Multi-Point Inspection</h4>
+                <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                  <source src="https://dealerfocus-training.netlify.app/assets/toyota_multipoint_inspection.mp4" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <li style="margin-bottom: 8px; margin-left: 24px;">State Inspection</li>
+              <li style="margin-bottom: 12px; margin-left: 24px;">Tire Repair <strong>(SEE DEALERSHIP POLICY FIRST)</strong> but typically routine.</li>
+            </ul>
+            
+            <p style="font-style: italic; color: var(--text-secondary); margin-top: 16px; padding: 12px; background: var(--surface-1); border-radius: var(--radius); border-left: 3px solid var(--fill-accent);">
+              <strong>Engine Oil/Lube and filter/Oil change is not the same as Transmission oil</strong>
+            </p>
+            
+            <div style="margin-top: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Car Maintenance: 10 Things Every Car Owner Should Know</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/car_maintenance_video.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          `;
+        } else if (service.hasExpandedContent && service.id === 2) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <h4 style="font-size: 14px; font-weight: 600; margin: 16px 0 10px 0; color: var(--text-primary);">Examples:</h4>
+            
+            <h4 style="font-size: 13px; font-weight: 600; margin: 12px 0 8px 0; color: var(--text-primary);">Honda and Acura Cars:</h4>
+            <p style="margin-bottom: 12px;">Maintenance due soon with a Letter and Number (A1)</p>
+            
+            <h4 style="font-size: 13px; font-weight: 600; margin: 12px 0 8px 0; color: var(--text-primary);">Toyota Cars:</h4>
+            <p>MAINTENANCE REQUIRED system helps remind the driver to take their car in for an oil change. The computer system tracks the engine miles from the time it was reset, and the light will trigger after 5,000 miles of driving. Every new car comes with Toyota Care at no cost maintenance 2 years or 25,000 miles (whichever comes first).</p>
+            
+            <div style="margin-top: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Toyota Oil Change and Recommended Service Intervals</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/toyota_oil_change.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          `;
+        } else if (service.hasExpandedContent && service.id === 3) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <img src="assets/car_noises_v2.png" alt="Car Noises You Shouldn't Ignore" style="width: 100%; max-width: 100%; height: auto; border-radius: 6px; margin: 16px 0;">
+            
+            <h4 style="font-size: 14px; font-weight: 600; margin: 16px 0 10px 0; color: var(--text-primary);">Example Concerns that we treat as Diagnostics</h4>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">(See Dealership Policy for special instructions)</p>
+            
+            <ul style="margin: 12px 0 12px 24px; color: var(--text-secondary); list-style-type: none; padding-left: 0;">
+              <li style="margin-bottom: 8px; margin-left: 24px;">Check Engine light</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">ABS Light (anti-braking system)</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Radio Concerns, GPS concerns, Software updates</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">(Electrical Diagnostics) Power windows, Door locks</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Transmission diagnostics (gear slipping or grinding)</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Suspension Issues</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Vehicle pulling issues</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Any noises</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Fluid Leaks</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Brakes (Squeaking, grinding)</li>
+              <li style="margin-bottom: 8px; margin-left: 24px;">Car not starting</li>
+              <li style="margin-bottom: 12px; margin-left: 24px;">Steering Issues</li>
+            </ul>
+            
+            <div style="margin-top: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Dashboard Lights Explained</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/dashboard_warning_lights.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          `;
+        } else if (service.hasExpandedContent && service.id === 4) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <h4 style="font-size: 14px; font-weight: 600; margin: 16px 0 12px 0; color: var(--text-primary);">Popular Accessories:</h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 16px 0;">
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden; background-size: cover; background-position: center;" style="background-image: url('assets/rain-guards.png');">
+                  <img src="assets/rain-guards.png" alt="Rain Guards" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Rain Guards</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Reduce wind noise and keep rain off windows</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+                  <img src="assets/auto-starter.png" alt="Auto Starter" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Auto Starter Installation</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Remote start your vehicle from anywhere</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+                  <img src="assets/rims.png" alt="Rims" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Rims</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Upgrade wheels for style and performance</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden; background: var(--surface-0);">
+                  <img src="assets/car-alarm.png" alt="Car Alarm" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Car Alarm</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Enhance vehicle security and theft prevention</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+                  <img src="assets/mud-flaps.png" alt="Mud Flaps" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Mud Flaps & Running Boards</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Protect undercarriage and add side steps</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+                  <img src="assets/tinted-windows.png" alt="Tinted Windows" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Tinted Windows</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Privacy, UV protection, and style</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+                  <img src="assets/roof-rack.png" alt="Roof Rack" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Roof Rack</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Extra cargo storage for travel</p>
+              </div>
+              
+              <div style="padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center;">
+                <div style="width: 100%; height: 140px; border-radius: 6px; margin-bottom: 10px; overflow: hidden;">
+                  <img src="assets/trailer-hitch.png" alt="Trailer Hitch" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <p style="font-size: 13px; font-weight: 600; margin: 8px 0 4px 0; color: var(--text-primary);">Trailer Hitch</p>
+                <p style="font-size: 12px; color: var(--text-secondary);">Towing capability for trailers</p>
+              </div>
+            </div>
+            
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 16px; padding: 12px; background: var(--surface-1); border-radius: var(--radius); border-left: 3px solid var(--fill-accent);">
+              <strong>Note:</strong> Accessories enhance your vehicle's functionality and appearance. Consult with your dealership about installation, warranty coverage, and financing options for any accessory upgrades.
+            </p>
+          `;
+        } else if (service.hasExpandedContent && service.id === 5) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <img src="assets/vin-location-guide.png" alt="Where is my VIN? The 4 most common locations" style="width: 100%; max-width: 100%; height: auto; border-radius: 6px; margin: 16px 0;">
+            
+            <div style="margin-top: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">What Does It Mean To Have A Vehicle Recall?</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/vehicle_recall_explained.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          `;
+        } else if (service.hasExpandedContent && service.id === 6) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <p style="margin-top: 14px; color: var(--text-secondary);">In some states you will need to add an Emission Test with a State Inspection. (See Dealership Policy)</p>
+            
+            <p style="margin-top: 12px; font-style: italic; color: var(--text-secondary);">Emission Test: Sometimes referred to as smog checks, emissions testing measures the level of pollutants — including hydrocarbons, oxygen, carbon monoxide, and oxides of nitrogen — present in vehicle exhaust</p>
+            
+            <img src="assets/virginia-state-inspection-sticker.png" alt="Virginia Safety Approval State Inspection Sticker" style="width: 100%; max-width: 100%; height: auto; border-radius: 6px; margin: 16px 0;">
+          `;
+        } else if (service.hasExpandedContent && service.id === 7) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <p style="margin-top: 14px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">The Shuttle</strong> will drive a customer to or from their work or home while their vehicle is in the shop as a courtesy service. The Shuttle may also drop off a passenger at another destination of their choosing within a mile radius.</p>
+            
+            <p style="margin-top: 12px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">A Loaner Car</strong> is a car that many dealerships, mechanics, and body shops offer convenience when you bring in your car to get serviced or have maintenance performed on your vehicles. Every dealership is different if this loaner is complimentary or the customer will have to leave a credit card for incidentals.</p>
+            
+            <p style="margin-top: 12px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Rental Car</strong> is a company or service that rents cars, as by the day or week. A car provided by such a company or service.</p>
+            
+            <video width="100%" height="auto" controls style="border-radius: 6px; background: #000; margin: 16px 0;">
+              <source src="https://dealerfocus-training.netlify.app/assets/how-to-rent-a-car-english.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            
+            <p style="margin-top: 12px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Valet</strong> Most Dealerships offer this pick-up and delivery service (See Dealer Policies).</p>
+            
+            <video width="100%" height="auto" controls style="border-radius: 6px; background: #000; margin: 16px 0;">
+              <source src="https://dealerfocus-training.netlify.app/assets/what-is-a-valet.mp4" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+          `;
+        } else if (service.hasExpandedContent && service.id === 8) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <img src="assets/tire details.png" alt="Tire Details" style="width: 100%; max-width: 100%; height: auto; border-radius: 6px; margin: 16px 0;">
+            
+            <p style="margin-top: 14px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Tire Repair:</strong> When the customer has a nail in the tire, slow air leak, even a flat tire and the customer replaces it with the spare. Follow Tire Repair policy.</p>
+            
+            <p style="margin-top: 12px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">New Tires:</strong> This is where we need to have the customer Tires Name (Brand) and size for most dealerships to call over to the Parts Department to confirm they are in stock.</p>
+            
+            <div style="margin-top: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Tire Balancing, Wheel Alignment, Tire Rotation, What's the difference?</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/Tire Balancing, Wheel Alignment, Tire Rotation, Whats the difference.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          `;
+        } else if (service.hasExpandedContent && service.id === 9) {
+          detailsHTML = `
+            <p>${service.details}</p>
+            
+            <div style="margin-top: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">How to easily remove and install a new windshield</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/How to easily remove and install a new windshield.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            
+            <p style="margin-top: 16px; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Side Mirror and Rear View Mirror</strong> — These are still considered glasses but for replacement, follow Accessories Policy.</p>
+            
+            <img src="assets/rear and side mirror.jpg" alt="Rear and Side Mirror" style="width: 100%; max-width: 100%; height: auto; border-radius: 6px; margin: 16px 0;">
+          `;
+        } else if (service.hasVideo) {
+          detailsHTML = `
+            <div style="margin-bottom: 16px;">
+              <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Car Maintenance: 10 Things Every Car Owner Should Know</h4>
+              <video width="100%" height="auto" controls style="border-radius: 6px; background: #000;">
+                <source src="https://dealerfocus-training.netlify.app/assets/car_maintenance_video.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <p>${service.details}</p>
+          `;
+        }
+        
+        card.innerHTML = `
+          <div class="service-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <div class="service-title">
+              <h3>${service.title}</h3>
+              <p>${service.desc}</p>
+            </div>
+            <i class="fas fa-chevron-down toggle-icon"></i>
+          </div>
+          <div class="service-details">
+            ${detailsHTML}
+          </div>
+        `;
+        
+        grid.appendChild(card);
+      });
+    }
+
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+      updateProgress();
+    }
+
+    function toggleExpandable(header) {
+      header.parentElement.classList.toggle('expanded');
+    }
+
+    const carMakes = [
+      { name: "Acura", logo: "Acura logo.jpeg", models: ["ILX", "TLX", "RLX", "RDX", "MDX", "ZDX"] },
+      { name: "Alfa Romeo", logo: "alpha romeo.jpeg", models: ["Giulietta", "Giulia", "4C", "4C Spider", "Stelvio", "Giulia Veloce", "Giulia GTA", "Giulia Quadrifoglio", "Stelvio Quadrifoglio"] },
+      { name: "Audi", logo: "audi logo.jpeg", models: ["A3", "A4", "A5", "A6", "A8", "Q5", "Q7", "R8", "RS6", "S4", "S5", "S6", "S8", "TT", "TTS"] },
+      { name: "BMW", logo: "bmw.png", models: ["2 Series", "3 Series", "4 Series", "5 Series", "7 Series", "8 Series", "X1", "X3", "X5", "X6", "X7", "Z4", "M3", "M5"] },
+      { name: "Cadillac", logo: "cadillac.jpeg", models: ["CT4", "CT5", "XT4", "XT5", "XT6", "Escalade", "Lyriq"] },
+      { name: "Chevrolet", logo: "Chevrolet-Logo.png", models: ["Spark", "Malibu", "Camaro", "Corvette", "Equinox", "Traverse", "Tahoe", "Suburban", "Silverado", "Blazer", "Trailblazer", "Bolt EV"] },
+      { name: "Chrysler", logo: "chrysler.png", models: ["300", "Pacifica", "Voyager"] },
+      { name: "Dodge", logo: "dodge.png", models: ["Charger", "Challenger", "Durango", "Journey", "Hornet"] },
+      { name: "Fiat", logo: "fiat.jpeg", models: ["500", "500X", "500L"] },
+      { name: "Ford", logo: "ford.jpeg", models: ["Fiesta", "Focus", "Fusion", "Mustang", "Escape", "Edge", "Explorer", "Expedition", "Bronco", "F-150", "Ranger", "EcoSport", "Maverick"] },
+      { name: "Genesis", logo: "genesis.jpeg", models: ["G70", "G80", "G90", "GV60", "GV70", "GV80"] },
+      { name: "GMC", logo: "gmc.jpeg", models: ["Terrain", "Acadia", "Yukon", "Sierra", "Canyon"] },
+      { name: "Honda", logo: "honda.jpeg", models: ["Civic", "Accord", "CR-V", "HR-V", "Pilot", "Passport", "Odyssey", "Ridgeline", "Fit", "Insight"] },
+      { name: "Hyundai", logo: "hyundai.png", models: ["Elantra", "Sonata", "Accent", "Venue", "Kona", "Tucson", "Santa Fe", "Palisade", "Ioniq"] },
+      { name: "Infiniti", logo: "infiniti.jpeg", models: ["Q50", "Q60", "QX50", "QX55", "QX60", "QX80"] },
+      { name: "Jaguar", logo: "jaguar.jpeg", models: ["XE", "XF", "XJ", "F-Type", "E-Pace", "F-Pace", "I-Pace"] },
+      { name: "Jeep", logo: "Jeep-logo.jpg", models: ["Renegade", "Compass", "Cherokee", "Grand Cherokee", "Wrangler", "Gladiator", "Wagoneer"] },
+      { name: "Kia", logo: "kia-logo-tump.jpeg", models: ["Rio", "Forte", "K5", "Soul", "Seltos", "Sportage", "Sorento", "Telluride", "Niro", "Carnival"] },
+      { name: "Lexus", logo: "lexus.png", models: ["IS", "ES", "GS", "LS", "UX", "NX", "RX", "GX", "LX", "RC"] },
+      { name: "Land Rover", models: ["Range Rover", "Range Rover Sport", "Range Rover Evoque", "Range Rover Velar", "Discovery", "Discovery Sport", "Defender"] },
+      { name: "Maserati", logo: "Maserati-Logo-tumb.png", models: ["Ghibli", "Quattroporte", "Levante", "GranTurismo", "MC20"] },
+      { name: "Mazda", logo: "Mazda-Logo-tumb.png", models: ["Mazda3", "Mazda6", "CX-3", "CX-30", "CX-5", "CX-9", "MX-5 Miata"] },
+      { name: "Mercedes-Benz", logo: "mercedes-logo-sm.png", models: ["A-Class", "C-Class", "E-Class", "S-Class", "CLA", "GLA", "GLB", "GLC", "GLE", "GLS", "G-Class"] },
+      { name: "Nissan", logo: "nissan-tumb.jpg", models: ["Versa", "Sentra", "Altima", "Maxima", "Kicks", "Rogue", "Murano", "Pathfinder", "Armada", "Frontier", "Titan"] },
+      { name: "Porsche", logo: "Porsche-Logo-tumb-1.png", models: ["911", "Cayenne", "Macan", "Panamera", "Taycan", "Boxster", "Cayman"] },
+      { name: "Ram", logo: "Ram.jpeg", models: ["1500", "2500", "3500", "ProMaster"] },
+      { name: "Subaru", logo: "Subaru-Logo-tumb.png", models: ["Impreza", "Legacy", "Crosstrek", "Forester", "Outback", "Ascent", "WRX", "BRZ"] },
+      { name: "Toyota", logo: "toyota.jpeg", models: ["Corolla", "Camry", "Avalon", "C-HR", "RAV4", "Highlander", "4Runner", "Sequoia", "Tacoma", "Tundra", "Sienna", "Prius", "Land Cruiser"] },
+      { name: "Volkswagen", logo: "vw.jpeg", models: ["Jetta", "Passat", "Golf", "Tiguan", "Atlas", "Taos", "ID.4"] }
+    ];
+
+    function initials(name) {
+      return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    }
+
+    function buildMakes() {
+      const grid = document.getElementById('makeGrid');
+      if (!grid) return;
+      carMakes.forEach((make, index) => {
+        const card = document.createElement('div');
+        card.id = `make-card-${index}`;
+        card.style.cssText = 'padding: 12px; background: var(--surface-1); border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s ease-out;';
+
+        const logoHTML = make.logo
+          ? `<img src="assets/${make.logo}" alt="${make.name} logo" style="max-width: 80%; max-height: 80%; object-fit: contain;" onerror="this.outerHTML='<span style=&quot;font-size:20px;font-weight:700;color:var(--text-accent);&quot;>${initials(make.name)}</span>';">`
+          : `<span style="font-size: 20px; font-weight: 700; color: var(--text-accent);">${initials(make.name)}</span>`;
+
+        card.innerHTML = `
+          <div style="width: 100%; height: 100px; border-radius: 6px; margin-bottom: 10px; overflow: hidden; background: var(--surface-2); display: flex; align-items: center; justify-content: center;">
+            ${logoHTML}
+          </div>
+          <p style="font-size: 13px; font-weight: 600; margin: 0; color: var(--text-primary);">${make.name}</p>
+        `;
+        card.onclick = () => toggleMake(index);
+        grid.appendChild(card);
+
+        const panel = document.createElement('div');
+        panel.id = `make-panel-${index}`;
+        panel.style.cssText = 'display: none; grid-column: 1 / -1; padding: 14px 16px; background: var(--surface-2); border-left: 3px solid var(--fill-accent); border-radius: var(--radius);';
+        panel.innerHTML = `
+          <h5 style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">${make.name} Models</h5>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${make.models.map(m => `<span style="background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--text-secondary);">${m}</span>`).join('')}
+          </div>
+        `;
+        grid.appendChild(panel);
+      });
+    }
+
+    function toggleMake(index) {
+      const panel = document.getElementById(`make-panel-${index}`);
+      const wasOpen = panel.style.display === 'block';
+
+      document.querySelectorAll('#makeGrid > div[id^="make-panel-"]').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('#makeGrid > div[id^="make-card-"]').forEach(c => c.style.borderColor = 'transparent');
+
+      if (!wasOpen) {
+        panel.style.display = 'block';
+        document.getElementById(`make-card-${index}`).style.borderColor = 'var(--fill-accent)';
+      }
+    }
+
+    buildMakes();
+
+    function updateProgress() {
+      const activeTab = document.querySelector('.tab-content.active');
+      if (activeTab.id === 'services') {
+        document.getElementById('progress').style.width = '50%';
+      } else {
+        document.getElementById('progress').style.width = '100%';
+      }
+    }
+
+    // Initialize
+    buildServices();
+    updateProgress();
+  </script>
+
+<script src="auth.js"></script><script src="bridge.js"></script></body>
+</html>

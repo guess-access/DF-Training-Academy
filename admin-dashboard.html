@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Dealerfocus Training Academy</title>
+<link rel="stylesheet" href="style.css"><script src="auth.js"></script>
+<style>
+.wrap{max-width:1150px;margin:0 auto;padding:28px 20px 60px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}
+.kpi{background:#050141;color:#fff;border-radius:14px;padding:16px}.kpi .l{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.05em;font-weight:800}.kpi .v{font-size:26px;font-weight:800}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:13.5px;border-radius:12px;overflow:hidden}
+th,td{padding:10px 11px;border-bottom:1px solid #edf0f6;text-align:left}th{background:#f4f6fb;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.badge{padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:800}.a{background:#e7e0ff;color:#3d1faa}.u{background:#eef1f6;color:#333}.c{background:#dff6e9;color:#11663d}.nc{background:#fde4e4;color:#a61e2a}
+.btn{border:0;border-radius:7px;padding:7px 11px;font-weight:700;cursor:pointer;font-size:12.5px;background:#050141;color:#fff}.btn.sec{background:#e9eef8;color:#050141}.btn.danger{background:#a61e2a}
+.detail{background:#fff;border:1px solid #dfe4ee;border-radius:14px;padding:20px;margin-top:18px}
+input,select{padding:8px 10px;border:1px solid #cfd7e5;border-radius:8px;font-size:13.5px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+</style>
+</head>
+<body>
+<header class="site-header sec-nav"><a class="brand" href="/"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"><span>Dealerfocus Training Academy</span></a><nav class="site-nav"><a href="/">Home</a><a href="/modules">Modules</a><a href="/sandbox">Sandbox</a><a href="/about-us">About Us</a></nav></header>
+<main class="wrap">
+<h1 class="sec-headings">Admin — results, progress & usage</h1>
+<p class="sec-content" style="color:#667085">Full backend view + editing rights. Users only see their own log.</p>
+<div class="kpis"><div class="kpi"><div class="l">Users</div><div class="v" id="kU">—</div></div><div class="kpi"><div class="l">Certified</div><div class="v" id="kC">—</div></div><div class="kpi"><div class="l">Attempts</div><div class="v" id="kA">—</div></div><div class="kpi"><div class="l">Pass mark</div><div class="v" id="kP">—</div></div></div>
+<div class="toolbar">
+<input id="q" placeholder="Search name/email…" oninput="render()" style="flex:1;min-width:200px">
+<select id="f" onchange="render()"><option value="">All roles</option><option value="admin">Admins</option><option value="user">Users</option><option value="cert">Certified only</option></select>
+<button class="btn sec" onclick="exportCSV()">Export CSV</button>
+<label style="font-size:13px">Pass % <input id="passIn" type="number" min="1" max="100" style="width:70px"> <button class="btn sec" onclick="savePass()">Save</button></label>
+<button class="btn sec" onclick="DFAuth.logout()">Logout</button>
+</div>
+<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Modules</th><th>Best</th><th>Attempts</th><th>Logins</th><th>Last active</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table>
+<div class="detail" id="detail" style="display:none"></div>
+</main>
+<footer class="site-footer sec-footer"><span>© 2026 Dealerfocus Training Academy | All rights reserved.</span></footer>
+<script>
+var DATA=[];
+document.addEventListener('df:ready',function(){
+  var me=DFAuth.current(); if(!me||me.role!=='admin'){location.href='login.html?next=admin-dashboard.html';return;}
+  document.getElementById('passIn').value=DFAuth.getSettings().passPct;
+  refresh();
+});
+function refresh(){var r=DFAuth.admin.list();if(r.error){alert(r.error);return;}DATA=r;render();kpis();}
+function kpis(){document.getElementById('kU').textContent=DATA.length;document.getElementById('kC').textContent=DATA.filter(function(u){return u.certified;}).length;document.getElementById('kA').textContent=DATA.reduce(function(s,u){return s+u.attempts;},0);document.getElementById('kP').textContent=DFAuth.getSettings().passPct+'%';}
+function render(){
+  var q=(document.getElementById('q').value||'').toLowerCase(), f=document.getElementById('f').value;
+  var rows=DATA.filter(function(u){if(f==='admin'&&u.role!=='admin')return false;if(f==='user'&&u.role!=='user')return false;if(f==='cert'&&!u.certified)return false;if(q&&(u.name+' '+u.email).toLowerCase().indexOf(q)<0)return false;return true;});
+  document.getElementById('rows').innerHTML=rows.map(function(u){
+    return '<tr><td><b>'+DFAuth.esc(u.name)+'</b></td><td>'+DFAuth.esc(u.email)+'</td><td><span class="badge '+(u.role==='admin'?'a':'u')+'">'+u.role+'</span></td><td>'+u.modulesDone+'</td><td>'+(u.best===null?'—':u.best+'%')+'</td><td>'+u.attempts+'</td><td>'+u.logins+'</td><td>'+(u.lastActive?new Date(u.lastActive).toLocaleString():'—')+'</td><td><span class="badge '+(u.certified?'c':'nc')+'">'+(u.certified?'Certified':'In progress')+'</span></td><td><button class="btn" onclick="openUser(\''+u.id+'\')">View / edit</button></td></tr>';
+  }).join('')||'<tr><td colspan="10">No users.</td></tr>';
+}
+function openUser(id){
+  var r=DFAuth.admin.get(id); if(r.error){alert(r.error);return;}
+  var mods=(DFAuth.getSettings().modules||DFAuth.MODULES);
+  var h='<h2>'+DFAuth.esc(r.user.name)+' <small style="color:#667085">'+DFAuth.esc(r.user.email)+' • '+r.user.role+'</small></h2>';
+  h+='<p>Certified: <b>'+(r.certified?'Yes 🏅':'No')+'</b></p>';
+  h+='<h3>Progress (edit)</h3>'+mods.map(function(m){var d=r.progress.modules&&r.progress.modules[m.id];var q=r.progress.quizzes&&r.progress.quizzes[m.quiz];return '<div style="display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap"><b style="min-width:260px">'+DFAuth.esc(m.title)+'</b><span>'+(d?'Done ✓':'Not done')+'</span><span>Score: '+(q?q.score+'%':'—')+'</span><input id="sc_'+m.quiz+'" type="number" min="0" max="100" placeholder="set %" style="width:80px"><button class="btn sec" onclick="setScore(\''+id+'\',\''+m.quiz+'\')">Set score</button></div>';}).join('');
+  h+='<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" onclick="toggleRole(\''+id+'\',\''+r.user.role+'\')">Make '+(r.user.role==='admin'?'user':'admin')+'</button><button class="btn sec" onclick="resetU(\''+id+'\')">Reset progress</button><button class="btn danger" onclick="delU(\''+id+'\')">Delete user</button><button class="btn sec" onclick="document.getElementById(\'detail\').style.display=\'none\'">Close</button></div>';
+  h+='<h3>Attempts log</h3><table><thead><tr><th>Date</th><th>Quiz</th><th>Score</th><th>Status</th><th>Source</th></tr></thead><tbody>'+(r.attempts.slice().reverse().map(function(a){return '<tr><td>'+new Date(a.at).toLocaleString()+'</td><td>'+DFAuth.esc(a.quiz)+'</td><td>'+a.score+'%</td><td>'+(a.passed?'Passed':'Not passed')+'</td><td>'+DFAuth.esc(a.source||'quiz')+'</td></tr>';}).join('')||'<tr><td colspan="5">None</td></tr>')+'</tbody></table>';
+  var dw = r.usage.dwell ? Math.round(Object.keys(r.usage.dwell).reduce(function(s,k){return s+r.usage.dwell[k];},0)/60) : 0;
+  h+='<h3>Usage</h3><p style="font-size:13px">Logins: '+r.usage.logins.length+' • Time in training: ~'+dw+' min • Views: '+r.usage.views.length+'<br>Recent: '+DFAuth.esc(r.usage.views.slice(-10).map(function(v){return v.page;}).join(', '))+'</p>';
+  var d=document.getElementById('detail');d.style.display='block';d.innerHTML=h;d.scrollIntoView({behavior:'smooth'});
+}
+function setScore(id,quiz){var v=document.getElementById('sc_'+quiz).value;if(v===''){alert('Enter 0-100');return;}var r=DFAuth.admin.setScore(id,quiz,v);if(r.error)alert(r.error);else{refresh();openUser(id);}}
+function toggleRole(id,cur){DFAuth.admin.setRole(id,cur==='admin'?'user':'admin');refresh();}
+function resetU(id){if(!confirm('Reset this user progress + attempts?'))return;DFAuth.admin.reset(id);refresh();openUser(id);}
+function delU(id){if(!confirm('Delete user? Cannot undo.'))return;var r=DFAuth.admin.del(id);if(r.error)alert(r.error);else{document.getElementById('detail').style.display='none';refresh();}}
+function savePass(){var v=Number(document.getElementById('passIn').value);if(!(v>=1&&v<=100)){alert('Enter 1-100');return;}DFAuth.admin.saveSettings(Object.assign(DFAuth.getSettings(),{passPct:v}));refresh();}
+function exportCSV(){var csv='name,email,role,modules,best,attempts,logins,lastActive,certified\n'+DATA.map(function(u){return [u.name,u.email,u.role,u.modulesDone,u.best==null?'':u.best,u.attempts,u.logins,u.lastActive||'',u.certified?'yes':'no'].map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n');var b=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='dealerfocus-users.csv';a.click();}
+</script>
+</body>
+</html>

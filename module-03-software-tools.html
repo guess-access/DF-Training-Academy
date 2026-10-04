@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Module 03: Program Software & Tools — Dealerfocus Training Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Merriweather:wght@400;500;600;700&family=Lato:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"><style>.sec-nav{color:#fcf8f8 !important;background-color:#050141 !important}
+.sec-hero{color:#f8f7f7 !important;font-family:'Merriweather', sans-serif !important;border:1px solid #d1d1d1 !important}
+.sec-modules{color:#f3f1f1 !important;font-family:'Merriweather', sans-serif !important;background-color:#011441 !important;border:2px solid #919191 !important}
+.back-link{display:inline-block;margin-bottom:22px;font-size:14px;font-weight:600;opacity:.75;}
+.back-link:hover{opacity:1;}
+
+/* Refresher Training - full width */
+.refresher-training-embed, .refresher-training-embed iframe, iframe.refresher-training-iframe { width:100% !important; max-width:none !important; display:block; border:0; }
+
+.csr-modal{display:none;position:fixed;inset:0;z-index:9999;}
+.csr-modal.open{display:block;}
+.csr-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(2px);}
+.csr-modal-dialog{position:relative;width:min(1200px,94vw);height:min(90vh,900px);margin:5vh auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.3);display:flex;flex-direction:column;}
+.csr-modal-header{height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#050141;color:#fff;font-family:var(--font-body);}
+.csr-modal-close{border:0;background:transparent;color:#fff;font-size:30px;line-height:1;cursor:pointer;padding:2px 8px;}
+#schedulerModuleFrame{width:100%;height:100%;border:0;background:#f4f7fb;flex:1;}
+body.csr-modal-open{overflow:hidden;}
+@media(max-width:700px){.csr-modal-dialog{width:100vw;height:100vh;margin:0;border-radius:0;}}
+</style>
+</head>
+<body>
+<header class="site-header sec-nav">
+  <a class='brand' href='/'>
+    <img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo">
+    <span>Dealerfocus Training Academy</span>
+  </a>
+  <nav class="site-nav"><a class href='/'>Home</a><a class href='/modules'>Modules</a><a class href='/sandbox'>Sandbox</a><a class href='/about-us'>About Us</a></nav>
+</header>
+<main class="page-main">
+  <a class='back-link' href='/modules'>&larr; Back to Modules</a>
+  <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 03</p>
+  <h1 class="sec-headings">Program Software & Tools</h1>
+  <div class="body-text sec-content">Walkthroughs of every system and software reps use daily.
+
+Scheduling tools, call software, and internal dashboards. Includes login steps, navigation basics, and where to find key customer info fast.</div>
+
+  <a href="https://onizoa.github.io/Scheduler-Training-Hub/index.html" class="cta-button" style="margin-top:14px;" onclick="openSchedulerModule(event)">Open Scheduler Training Hub</a>
+
+  <div id="schedulerModuleModal" class="csr-modal" aria-hidden="true">
+    <div class="csr-modal-backdrop" onclick="closeSchedulerModule()"></div>
+    <div class="csr-modal-dialog" role="dialog" aria-modal="true" aria-label="Scheduler Training Hub">
+      <div class="csr-modal-header">
+        <strong>Scheduler Training Hub</strong>
+        <button type="button" class="csr-modal-close" onclick="closeSchedulerModule()" aria-label="Close">&times;</button>
+      </div>
+      <iframe id="schedulerModuleFrame" title="Scheduler Training Hub" src="about:blank"></iframe>
+    </div>
+  </div>
+</main>
+<footer class="site-footer sec-footer">
+  <span>© 2026 Dealerfocus Training Academy | All rights reserved.</span>
+  
+</footer>
+
+<script>
+function openSchedulerModule(event){
+  event.preventDefault();
+  const modal=document.getElementById('schedulerModuleModal');
+  const frame=document.getElementById('schedulerModuleFrame');
+  const targetUrl='https://onizoa.github.io/Scheduler-Training-Hub/index.html';
+  if(frame.src !== targetUrl) frame.src=targetUrl;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  document.body.classList.add('csr-modal-open');
+}
+function closeSchedulerModule(){
+  const modal=document.getElementById('schedulerModuleModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+  document.body.classList.remove('csr-modal-open');
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSchedulerModule();});
+</script>
+<script src="auth.js"></script><script src="bridge.js"></script></body>
+</html>

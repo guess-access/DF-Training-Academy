@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Module 05: Certification — Dealerfocus Training Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Merriweather:wght@400;500;600;700&family=Lato:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"><style>.sec-nav{color:#fcf8f8 !important;background-color:#050141 !important}
+.sec-hero{color:#f8f7f7 !important;font-family:'Merriweather', sans-serif !important;border:1px solid #d1d1d1 !important}
+.sec-modules{color:#f3f1f1 !important;font-family:'Merriweather', sans-serif !important;background-color:#011441 !important;border:2px solid #919191 !important}
+.back-link{display:inline-block;margin-bottom:22px;font-size:14px;font-weight:600;opacity:.75;}
+.back-link:hover{opacity:1;}
+
+/* Refresher Training - full width */
+.refresher-training-embed, .refresher-training-embed iframe, iframe.refresher-training-iframe { width:100% !important; max-width:none !important; display:block; border:0; }
+
+/* ===== Certification Platform ===== */
+.cert-app{margin-top:10px;font-family:var(--font-body);}
+.cert-app *{box-sizing:border-box;}
+.cert-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:28px 0 34px;}
+.cert-stat{border:1px solid rgba(128,128,128,.22);border-radius:14px;padding:20px;}
+.cert-stat .cert-stat-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.6;margin:0 0 8px;}
+.cert-stat .cert-stat-value{font-family:var(--font-display);font-size:30px;font-weight:700;margin:0;}
+.cert-badge-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;}
+.cert-badge-pending{background:rgba(128,128,128,.15);color:#555;}
+.cert-badge-progress{background:color-mix(in srgb, var(--color-accent) 18%, transparent);color:#0a6b73;}
+.cert-badge-earned{background:#0a3d2e;color:#5cf0b8;}
+.cert-progress-track{height:10px;border-radius:999px;background:rgba(128,128,128,.18);overflow:hidden;margin-top:10px;}
+.cert-progress-fill{height:100%;background:var(--color-accent);border-radius:999px;transition:width .3s ease;}
+.cert-section{margin:38px 0;}
+.cert-section h2{font-family:var(--font-display);font-size:22px;margin:0 0 4px;}
+.cert-section .cert-section-sub{font-size:14px;opacity:.7;margin:0 0 18px;}
+.cert-module-list{display:flex;flex-direction:column;gap:10px;}
+.cert-module-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid rgba(128,128,128,.2);border-radius:12px;padding:14px 18px;flex-wrap:wrap;}
+.cert-module-row .cert-module-info{display:flex;align-items:center;gap:12px;}
+.cert-check{width:24px;height:24px;border-radius:7px;border:2px solid rgba(128,128,128,.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:14px;cursor:pointer;transition:.15s;}
+.cert-check.done{background:var(--color-accent);border-color:var(--color-accent);color:#04333a;}
+.cert-module-name{font-weight:600;font-size:15px;}
+.cert-module-actions{display:flex;align-items:center;gap:12px;}
+.cert-link{font-size:13px;font-weight:600;color:var(--color-accent);}
+.cert-toggle-btn{font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;border:1px solid rgba(128,128,128,.35);background:transparent;cursor:pointer;color:inherit;}
+.cert-toggle-btn:hover{border-color:var(--color-accent);}
+.cert-assess-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
+.cert-assess-card{border:1px solid rgba(128,128,128,.22);border-radius:16px;padding:24px;}
+.cert-assess-card h3{margin:0 0 4px;font-size:17px;}
+.cert-assess-weight{font-size:12px;font-weight:700;color:var(--color-accent);text-transform:uppercase;letter-spacing:.04em;margin:0 0 12px;}
+.cert-assess-score{font-family:var(--font-display);font-size:26px;font-weight:700;margin:14px 0 2px;}
+.cert-assess-status{font-size:13px;opacity:.75;margin:0 0 14px;}
+.cert-quiz{margin-top:16px;border-top:1px solid rgba(128,128,128,.18);padding-top:16px;}
+.cert-q{margin:0 0 16px;}
+.cert-q p{font-weight:600;font-size:14px;margin:0 0 8px;}
+.cert-opt{display:block;padding:10px 12px;border:1px solid rgba(128,128,128,.28);border-radius:9px;margin:6px 0;cursor:pointer;font-size:13.5px;transition:.15s;}
+.cert-opt:hover{border-color:var(--color-accent);}
+.cert-opt.picked{border-color:var(--color-accent);background:color-mix(in srgb, var(--color-accent) 12%, transparent);}
+.cert-opt input{margin-right:9px;}
+.cert-final{border:1px solid rgba(128,128,128,.25);border-radius:16px;padding:28px;margin-top:8px;}
+.cert-final-score{font-family:var(--font-display);font-size:44px;font-weight:700;margin:6px 0;}
+.cert-certificate{margin-top:22px;border:2px solid var(--color-accent);border-radius:16px;padding:40px;text-align:center;background:linear-gradient(145deg, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent);}
+.cert-certificate .cert-crest{font-size:38px;margin-bottom:6px;}
+.cert-certificate h2{font-family:var(--font-display);font-size:26px;margin:6px 0;}
+.cert-certificate .cert-name{font-family:var(--font-display);font-size:32px;font-weight:700;margin:16px 0;color:var(--color-accent);}
+.cert-certificate .cert-meta{font-size:13px;opacity:.7;margin-top:18px;}
+.cert-name-input{padding:11px 14px;border-radius:9px;border:1px solid rgba(128,128,128,.35);font-size:14px;width:100%;max-width:320px;background:transparent;color:inherit;}
+.cert-btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;}
+.cert-btn-secondary{font-size:13px;font-weight:700;padding:11px 18px;border-radius:9px;border:1px solid rgba(128,128,128,.35);background:transparent;cursor:pointer;color:inherit;}
+.cert-btn-secondary:hover{border-color:var(--color-accent);}
+@media print{
+  header.site-header, footer.site-footer, .back-link, .cert-overview, .cert-section:not(.cert-print-only), .cert-btn-row{display:none !important;}
+  .cert-print-only{display:block !important;}
+  body{padding:0;}
+}
+</style>
+</head>
+<body>
+<header class="site-header sec-nav">
+  <a class='brand' href='/'>
+    <img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo">
+    <span>Dealerfocus Training Academy</span>
+  </a>
+  <nav class="site-nav"><a class href='/'>Home</a><a class href='/modules'>Modules</a><a class href='/sandbox'>Sandbox</a><a class href='/about-us'>About Us</a></nav>
+</header>
+<main class="page-main">
+  <a class='back-link' href='/modules'>&larr; Back to Modules</a>
+  <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 05</p>
+  <h1 class="sec-headings">Certification</h1>
+  <div class="body-text sec-content">Track your progress toward CSR certification. Complete all required modules and pass each assessment with 80% or higher to earn your certification badge.</div>
+
+  <div class="cert-app" id="certApp">
+
+    <div class="cert-overview">
+      <div class="cert-stat">
+        <p class="cert-stat-label">Modules Complete</p>
+        <p class="cert-stat-value" id="statModules">0/4</p>
+        <div class="cert-progress-track"><div class="cert-progress-fill" id="statModulesBar" style="width:0%"></div></div>
+      </div>
+      <div class="cert-stat">
+        <p class="cert-stat-label">Final Certification Score</p>
+        <p class="cert-stat-value" id="statScore">—</p>
+        <div class="cert-progress-track"><div class="cert-progress-fill" id="statScoreBar" style="width:0%"></div></div>
+      </div>
+      <div class="cert-stat">
+        <p class="cert-stat-label">Status</p>
+        <p style="margin:2px 0 0;"><span class="cert-badge-pill cert-badge-pending" id="statBadge">Not Started</span></p>
+      </div>
+    </div>
+
+    <div class="cert-section">
+      <h2>Required Modules</h2>
+      <p class="cert-section-sub">Mark each module complete once you've finished it. All four are required before you can be certified.</p>
+      <div class="cert-module-list" id="moduleList"></div>
+    </div>
+
+    <div class="cert-section">
+      <h2>Final Certification</h2>
+      <p class="cert-section-sub">Pass the assessment below with 80% or higher to complete your certification.</p>
+      <div class="cert-assess-grid">
+
+        <div class="cert-assess-card">
+          <p class="cert-assess-weight">100% of Final Score</p>
+          <h3>Final Written Assessment</h3>
+          <p style="font-size:13px;opacity:.75;margin:0;">Written knowledge check covering vehicle basics, recalls, geography, systems, and policy from Modules 1–4.</p>
+          <p class="cert-assess-score" id="writtenScoreDisplay">—</p>
+          <p class="cert-assess-status" id="writtenStatus">Not attempted</p>
+          <button type="button" class="cert-toggle-btn" id="writtenStartBtn" onclick="toggleQuiz('written')">Start Assessment</button>
+          <div class="cert-quiz hidden" id="writtenQuiz"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="cert-section">
+      <div class="cert-final">
+        <p class="cert-stat-label" style="margin:0;">Final Score (Final Written Assessment)</p>
+        <p class="cert-final-score" id="finalScoreBig">—</p>
+        <div class="cert-progress-track"><div class="cert-progress-fill" id="finalScoreBar" style="width:0%"></div></div>
+        <p id="finalRequirementNote" style="font-size:13px;opacity:.7;margin-top:12px;">Complete all 4 modules and score 80% or higher on the assessment to earn your certification badge.</p>
+
+        <div id="certificateArea"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+<footer class="site-footer sec-footer">
+  <span>© 2026 Dealerfocus Training Academy | All rights reserved.</span>
+  
+</footer>
+
+<script>
+(function(){
+  const STORAGE_KEY = "dfCert_v1";
+  const PASS = 80;
+
+  const moduleDefs = [
+    {id:"m1", name:"Module 01 — All About the USA", href:"module-01-usa.html"},
+    {id:"m2", name:"Module 02 — Vehicle 101", href:"module-02-vehicle101.html"},
+    {id:"m3", name:"Module 03 — Program Software & Tools", href:"module-03-software-tools.html"},
+    {id:"m4", name:"Module 04 — CSR Fundamentals", href:"module-04-csr-fundamentals.html"}
+  ];
+
+  const writtenQuestions = [
+    {q:"Which component transfers engine power to the wheels?", opts:["Battery","Transmission","Alternator","Brake rotor"], a:1},
+    {q:"What is the primary purpose of preventive maintenance?", opts:["Increase paperwork","Maintain vehicle condition and catch issues early","Replace every component","Prevent customers from driving"], a:1},
+    {q:"A manufacturer recall is best described as:", opts:["The same as an oil change","A manufacturer-issued action addressing a safety/compliance issue","Optional and never urgent","Only for vehicles under warranty"], a:1},
+    {q:"A standard dealership workflow generally starts with:", opts:["Vehicle delivery","Customer contact and vehicle information gathering","Parts ordering","Invoice generation"], a:1},
+    {q:"Which systems might a CSR use day to day?", opts:["CRM, DMS, scheduling, and manufacturer systems","Only email","A single paper logbook","None, everything is verbal"], a:0},
+    {q:"Time zones matter to a CSR mainly because they affect:", opts:["Vehicle pricing","Customer scheduling and availability","Recall eligibility","Parts inventory"], a:1},
+    {q:"What should a CSR verify to keep customer data accurate?", opts:["Only the phone number","Name, contact info, VIN, year/make/model, mileage, and concern","Nothing, the system auto-fills everything","Just the vehicle color"], a:1},
+    {q:"Under-hood inspection typically reviews:", opts:["Fluid levels, belts, hoses, battery, and visible leaks","Only the radio","Interior upholstery","Exterior paint color"], a:0},
+    {q:"What's a key policy responsibility for a CSR?", opts:["Sharing customer info freely","Protecting customer information and documenting interactions","Ignoring dealership procedures","Making decisions outside their authority"], a:1},
+    {q:"Which best separates a recall from routine maintenance?", opts:["Recalls are scheduled by the customer","Recalls address a manufacturer-identified issue, unlike routine service","They are exactly the same thing","Maintenance is always free"], a:1}
+  ];
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return {modules:{m1:false,m2:false,m3:false,m4:false}, written:{score:null}, name:""};
+  }
+  let state = loadState();
+
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); render(); }
+
+  function renderModules(){
+    const list = document.getElementById("moduleList");
+    list.innerHTML = "";
+    moduleDefs.forEach(m=>{
+      const done = !!state.modules[m.id];
+      const row = document.createElement("div");
+      row.className = "cert-module-row";
+      row.innerHTML =
+        '<div class="cert-module-info">'+
+          '<div class="cert-check'+(done?' done':'')+'" data-id="'+m.id+'">'+(done?'✓':'')+'</div>'+
+          '<span class="cert-module-name">'+m.name+'</span>'+
+        '</div>'+
+        '<div class="cert-module-actions">'+
+          '<a class="cert-link" href="'+m.href+'">Open module &rarr;</a>'+
+          '<button type="button" class="cert-toggle-btn" data-toggle="'+m.id+'">'+(done?'Mark Incomplete':'Mark Complete')+'</button>'+
+        '</div>';
+      list.appendChild(row);
+    });
+    list.querySelectorAll("[data-toggle]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-toggle");
+        state.modules[id] = !state.modules[id];
+        save();
+      });
+    });
+    list.querySelectorAll(".cert-check").forEach(chk=>{
+      chk.addEventListener("click", ()=>{
+        const id = chk.getAttribute("data-id");
+        state.modules[id] = !state.modules[id];
+        save();
+      });
+    });
+  }
+
+  function buildQuizHTML(kind, questions){
+    let html = "";
+    questions.forEach((item, qi)=>{
+      html += '<div class="cert-q" data-qi="'+qi+'"><p>'+(qi+1)+'. '+item.q+'</p>';
+      item.opts.forEach((opt, oi)=>{
+        html += '<label class="cert-opt" data-qi="'+qi+'" data-oi="'+oi+'"><input type="radio" name="'+kind+'_q'+qi+'" value="'+oi+'"> '+opt+'</label>';
+      });
+      html += '</div>';
+    });
+    html += '<button type="button" class="cert-toggle-btn" onclick="submitQuiz(\''+kind+'\')">Submit Assessment</button>';
+    return html;
+  }
+
+  window.toggleQuiz = function(kind){
+    const box = document.getElementById(kind+"Quiz");
+    const isHidden = box.classList.contains("hidden");
+    if(isHidden){
+      box.innerHTML = buildQuizHTML(kind, writtenQuestions);
+      box.classList.remove("hidden");
+      box.querySelectorAll(".cert-opt").forEach(label=>{
+        label.addEventListener("click", ()=>{
+          const qi = label.getAttribute("data-qi");
+          box.querySelectorAll('.cert-opt[data-qi="'+qi+'"]').forEach(l=>l.classList.remove("picked"));
+          label.classList.add("picked");
+          label.querySelector("input").checked = true;
+        });
+      });
+      document.getElementById(kind+"StartBtn").textContent = "Hide Assessment";
+    } else {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      document.getElementById(kind+"StartBtn").textContent = "Retake Assessment";
+    }
+  };
+
+  window.submitQuiz = function(kind){
+    const questions = writtenQuestions;
+    const box = document.getElementById(kind+"Quiz");
+    let correct = 0;
+    questions.forEach((item, qi)=>{
+      const picked = box.querySelector('input[name="'+kind+'_q'+qi+'"]:checked');
+      if(picked && parseInt(picked.value,10) === item.a) correct++;
+    });
+    const score = Math.round((correct/questions.length)*100);
+    state[kind].score = score;
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    document.getElementById(kind+"StartBtn").textContent = "Retake Assessment";
+    save();
+  };
+
+  function scoreLabel(kind){
+    const s = state[kind].score;
+    const el = document.getElementById(kind+"ScoreDisplay");
+    const st = document.getElementById(kind+"Status");
+    if(s === null || s === undefined){
+      el.textContent = "—";
+      st.textContent = "Not attempted";
+    } else {
+      el.textContent = s + "%";
+      st.textContent = s >= PASS ? "Passed (80% required)" : "Not yet passed — 80% required, retake anytime";
+      st.style.color = s >= PASS ? "#1a8f5a" : "#c0392b";
+    }
+  }
+
+  function render(){
+    renderModules();
+    scoreLabel("written");
+
+    const modIds = moduleDefs.map(m=>m.id);
+    const modsDone = modIds.filter(id=>state.modules[id]).length;
+    document.getElementById("statModules").textContent = modsDone+"/"+modIds.length;
+    document.getElementById("statModulesBar").style.width = Math.round((modsDone/modIds.length)*100)+"%";
+
+    const writtenScore = state.written.score;
+    const finalScore = (writtenScore !== null && writtenScore !== undefined) ? writtenScore : null;
+    document.getElementById("statScore").textContent = finalScore===null ? "—" : finalScore+"%";
+    document.getElementById("statScoreBar").style.width = (finalScore||0)+"%";
+    document.getElementById("finalScoreBig").textContent = finalScore===null ? "—" : finalScore+"%";
+    document.getElementById("finalScoreBar").style.width = (finalScore||0)+"%";
+
+    const allModulesDone = modsDone === modIds.length;
+    const writtenPassed = writtenScore !== null && writtenScore !== undefined && writtenScore >= PASS;
+    const certified = allModulesDone && writtenPassed;
+
+    const badge = document.getElementById("statBadge");
+    if(certified){
+      badge.textContent = "Certified";
+      badge.className = "cert-badge-pill cert-badge-earned";
+    } else if(modsDone>0 || writtenScore!=null){
+      badge.textContent = "In Progress";
+      badge.className = "cert-badge-pill cert-badge-progress";
+    } else {
+      badge.textContent = "Not Started";
+      badge.className = "cert-badge-pill cert-badge-pending";
+    }
+
+    renderCertificate(certified, finalScore);
+  }
+
+  function renderCertificate(certified, finalScore){
+    const area = document.getElementById("certificateArea");
+    if(!certified){
+      area.innerHTML = "";
+      return;
+    }
+    const today = new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
+    area.innerHTML =
+      '<div class="cert-btn-row">'+
+        '<input type="text" class="cert-name-input" id="certNameInput" placeholder="Enter your full name" value="'+(state.name||"")+'">'+
+      '</div>'+
+      '<div class="cert-certificate" id="certificateBlock">'+
+        '<div class="cert-crest">🏅</div>'+
+        '<p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin:0;">Dealerfocus Training Academy</p>'+
+        '<h2>Certificate of CSR Completion</h2>'+
+        '<p style="font-size:14px;opacity:.75;margin:0;">This certifies that</p>'+
+        '<p class="cert-name" id="certNameDisplay">'+(state.name || "Your Name Here")+'</p>'+
+        '<p style="font-size:14px;opacity:.8;max-width:50ch;margin:0 auto;">has successfully completed all required CSR Fundamentals modules and passed the Final Certification with a score of '+finalScore+'%.</p>'+
+        '<p class="cert-meta">Issued '+today+' &middot; Final Written Assessment: '+state.written.score+'%</p>'+
+      '</div>'+
+      '<div class="cert-btn-row">'+
+        '<button type="button" class="cert-toggle-btn" onclick="window.print()">Print / Save Certificate</button>'+
+        '<button type="button" class="cert-btn-secondary" onclick="resetCert()">Reset Progress</button>'+
+      '</div>';
+
+    document.getElementById("certNameInput").addEventListener("input", (e)=>{
+      state.name = e.target.value;
+      document.getElementById("certNameDisplay").textContent = state.name || "Your Name Here";
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    });
+  }
+
+  window.resetCert = function(){
+    if(!confirm("Reset all certification progress? This cannot be undone.")) return;
+    state = {modules:{m1:false,m2:false,m3:false,m4:false}, written:{score:null}, name:""};
+    save();
+  };
+
+  render();
+})();
+</script>
+<script src="auth.js"></script><script src="bridge.js"></script></body>
+</html>

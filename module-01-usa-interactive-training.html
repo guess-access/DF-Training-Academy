@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All About the USA - Interactive Training</title>
+<style>
+:root{
+  --navy:#071b49; --blue:#1f5eff; --light:#f4f7fb; --white:#fff;
+  --text:#172033; --muted:#667085; --success:#16834b; --danger:#c73535;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--light);color:var(--text)}
+.app{display:flex;min-height:100vh}
+.sidebar{width:270px;background:var(--navy);color:white;padding:24px 16px;position:fixed;top:0;bottom:0;left:0}
+.brand{font-size:23px;font-weight:800;margin:8px 10px 28px}
+.nav-btn{width:100%;text-align:left;border:0;background:transparent;color:#dbe6ff;padding:14px 13px;border-radius:10px;margin:4px 0;cursor:pointer;font-size:15px}
+.nav-btn:hover,.nav-btn.active{background:#18366f;color:white}
+.main{margin-left:270px;width:calc(100% - 270px);padding:36px;max-width:1200px}
+.hero{background:var(--navy);color:white;border-radius:18px;padding:38px;margin-bottom:24px}
+.hero h1{margin:0 0 10px;font-size:34px}.hero p{margin:0;color:#dbe6ff;font-size:17px;line-height:1.6}
+.card{background:white;border-radius:16px;padding:28px;margin-bottom:22px;box-shadow:0 4px 18px rgba(20,35,70,.07)}
+h2{margin-top:0;color:var(--navy)}h3{color:var(--navy)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.info{border:1px solid #e3e8f2;border-radius:12px;padding:18px}
+.info strong{display:block;font-size:19px;margin-bottom:8px}
+.table{width:100%;border-collapse:collapse;margin-top:15px}.table th,.table td{padding:12px;border-bottom:1px solid #e7ebf2;text-align:left}.table th{background:#f5f7fb}
+.btn{border:0;border-radius:9px;padding:12px 18px;background:var(--blue);color:white;font-weight:700;cursor:pointer}.btn.secondary{background:#e9eef8;color:var(--navy)}.btn.white{background:var(--white);color:var(--blue)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;justify-content:space-between;margin-top:24px}
+.hidden{display:none!important}
+.progress{height:9px;background:#e6ebf4;border-radius:10px;overflow:hidden;margin:18px 0}.bar{height:100%;background:var(--blue);width:0}
+.question{padding:20px;border:1px solid #e2e7f0;border-radius:13px;margin-bottom:16px}
+.question h3{margin:0 0 14px;font-size:17px}.option{display:block;padding:10px 12px;border-radius:8px;margin:7px 0;background:#f7f9fc;cursor:pointer}.option:hover{background:#edf3ff}
+.option input{margin-right:10px}
+.result{text-align:center;padding:30px}.score{font-size:48px;font-weight:800;color:var(--navy)}
+.badge{display:inline-block;padding:7px 12px;border-radius:999px;font-weight:700}.pass{background:#dff6e9;color:var(--success)}.fail{background:#fde4e4;color:var(--danger)}
+.note{background:#eef4ff;border-left:4px solid var(--blue);padding:15px;border-radius:8px;line-height:1.5}
+footer{text-align:center;color:var(--muted);padding:20px}
+@media(max-width:800px){.sidebar{width:100%;position:relative;height:auto}.app{display:block}.main{margin-left:0;width:100%;padding:20px}.sidebar{display:flex;flex-wrap:wrap;gap:5px}.brand{width:100%;margin-bottom:8px}.nav-btn{width:auto}}
+
+/* Refresher Training - full width */
+.refresher-training-embed, .refresher-training-embed iframe, iframe.refresher-training-iframe { width:100% !important; max-width:none !important; display:block; border:0; }
+
+.timezone-converter{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;margin-top:18px}.tz-field label{display:block;font-weight:700;color:var(--navy);margin-bottom:7px;font-size:14px}.tz-field input,.tz-field select{width:100%;padding:12px;border:1px solid #d8deea;border-radius:9px;font-size:15px;background:#fff;color:var(--text)}.tz-result{margin-top:18px;background:#eef4ff;border-left:4px solid var(--blue);padding:18px;border-radius:9px;line-height:1.6}.tz-result strong{color:var(--navy)}
+
+.asset-photo{width:100%;max-width:100%;border-radius:14px;margin-top:20px;box-shadow:0 4px 18px rgba(20,35,70,.1);display:block}
+.asset-caption{text-align:center;color:var(--muted);font-size:13px;margin-top:8px}
+.floating-reminder{position:relative;margin-top:24px;background:#fffaf0;border:1px solid #ffe0a3;border-radius:16px;padding:20px 22px;box-shadow:0 14px 34px rgba(180,120,0,.18);animation:float-bob 4s ease-in-out infinite}
+.floating-reminder strong{color:#9a5b00}
+@keyframes float-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">All About the USA</div>
+    <button class="nav-btn active" onclick="showPage('welcome',this)">🏠 Welcome</button>
+    <button class="nav-btn" onclick="showPage('states',this)">🇺🇸 Module 1: States</button>
+    <button class="nav-btn" onclick="showPage('timezones',this)">🕐 Module 2: Time Zones</button>
+    <a href="https://forms.gle/do5i1BvNqkeAegpW6" class="nav-btn" target="_blank" rel="noopener">📝 Assessment</a>
+  </aside>
+
+  <main class="main">
+    <section id="welcome" class="page">
+      <div class="hero">
+        <h1>All About the USA</h1>
+        <p>Interactive Training • States & Time Zones</p>
+        <button class="btn white" style="margin-top:20px" onclick="history.go(-2)">← Back to Modules Tab</button>
+      </div>
+      <div class="card">
+        <h2>Welcome to the Training</h2>
+        <p>This interactive course will help you understand the basic geography of the United States, including its 50 states and major time zones.</p>
+        <div class="grid">
+          <div class="info"><strong>Module 1</strong>States</div>
+          <div class="info"><strong>Module 2</strong>Time Zones</div>
+          <div class="info"><strong>Final Assessment</strong>Test your knowledge</div>
+        </div>
+        <div class="note" style="margin-top:20px"><strong>How to use:</strong> Select each lesson from the menu, review the material, then complete the assessment.</div>
+        <div class="actions"><span></span><button class="btn" onclick="showPage('states',document.querySelectorAll('.nav-btn')[1])">Start Training →</button></div>
+      </div>
+    </section>
+
+    <section id="states" class="page hidden">
+      <div class="card">
+        <h2>Module 1: States</h2>
+        <p>The United States is made up of <strong>50 states</strong>. Forty-eight states form the contiguous United States, while Alaska and Hawaii are separated geographically from the other states.</p>
+        <div class="grid">
+          <div class="info"><strong>48</strong>Contiguous states</div>
+          <div class="info"><strong>Alaska</strong>Northwestern North America</div>
+          <div class="info"><strong>Hawaii</strong>Island state in the Pacific</div>
+          <div class="info"><strong>50</strong>Total U.S. states</div>
+        </div>
+        <img class="asset-photo" src="assets/united-states-map.jpg" alt="Map of the United States showing all 50 states">
+        <p class="asset-caption">Map of the United States</p>
+        <img class="asset-photo" src="assets/List-of-State-Abbreviations.jpg" alt="List of United States state abbreviations">
+        <p class="asset-caption">List of State Abbreviations</p>
+        <div class="note" style="margin-top:20px">💡 <strong>Quick Check:</strong> Alaska and Hawaii are the only two U.S. states that are not part of the contiguous United States.</div>
+      </div>
+      <div class="card">
+        <h2>State Recognition Challenge</h2>
+        <p>What states have the abbreviation <strong>ME</strong>, <strong>AR</strong> & <strong>LA</strong>?</p>
+        <button class="btn secondary" onclick="this.nextElementSibling.classList.remove('hidden')">Reveal Answer</button>
+        <p class="hidden" style="margin-top:15px">
+          <strong>ME</strong> - Maine<br>
+          <strong>AR</strong> - Arkansas<br>
+          <strong>LA</strong> - Louisiana
+        </p>
+      </div>
+    </section>
+
+    <section id="timezones" class="page hidden">
+      <div class="card">
+        <h2>Module 2: Time Zones</h2>
+        <p>The contiguous United States primarily spans four major time zones.</p>
+        <table class="table">
+          <tr><th>Time Zone</th><th>Abbreviation</th><th>Example State</th><th>Difference from ET</th></tr>
+          <tr><td>Eastern</td><td>ET</td><td>New York</td><td>Same time (reference zone)</td></tr>
+          <tr><td>Central</td><td>CT</td><td>Texas</td><td>1 hour behind ET</td></tr>
+          <tr><td>Mountain</td><td>MT</td><td>Colorado</td><td>2 hours behind ET</td></tr>
+          <tr><td>Pacific</td><td>PT</td><td>California</td><td>3 hours behind ET</td></tr>
+        </table>
+        <div class="note" style="margin-top:20px">🕐 <strong>Remember:</strong> When moving west across the contiguous U.S., the local clock generally moves back one hour for each time-zone boundary crossed.</div>
+        <img class="asset-photo" src="assets/timezones-states.png" alt="Map of United States time zones by state">
+        <p class="asset-caption">U.S. Time Zones by State</p>
+        <div class="floating-reminder">⏰ <strong>Reminder:</strong> Daylight saving time (DST) is a period of the year between spring and fall when clocks in most parts of the United States are set one hour ahead of standard time. DST begins on the second Sunday in March and ends on the first Sunday in November.</div>
+      </div>
+      <div class="card">
+        <h2>🕐 Time Zone Converter</h2>
+        <p>Use this tool to convert a date and time from one time zone to another. This is especially useful when scheduling customer calls across the United States.</p>
+        <div class="timezone-converter">
+          <div class="tz-field">
+            <label for="tzDateTime">Date & Time</label>
+            <input id="tzDateTime" type="datetime-local">
+          </div>
+          <div class="tz-field">
+            <label for="fromZone">From</label>
+            <select id="fromZone">
+              <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+              <option value="America/Anchorage">Alaska Time (AKT)</option>
+              <option value="Asia/Manila">Philippine Time (PHT)</option>
+            </select>
+          </div>
+          <div class="tz-field">
+            <label for="toZone">To</label>
+            <select id="toZone">
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="Asia/Manila">Philippine Time (PHT)</option>
+              <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+              <option value="America/Anchorage">Alaska Time (AKT)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" style="margin-top:18px" onclick="convertTimeZone()">Convert Time →</button>
+        <div id="tzConversionResult" class="tz-result hidden"></div>
+      </div>
+      <div class="card">
+        <h2>Time Zone Practice</h2>
+        <p><strong>If it is 3:00 PM Eastern Time, what time is it in California?</strong></p>
+        <div class="grid">
+          <button class="btn secondary" onclick="tzAnswer(this,false)">1:00 PM</button>
+          <button class="btn secondary" onclick="tzAnswer(this,true)">12:00 PM</button>
+          <button class="btn secondary" onclick="tzAnswer(this,false)">2:00 PM</button>
+        </div>
+        <p id="tzFeedback" style="font-weight:700;margin-top:15px"></p>
+      </div>
+    </section>
+
+    <section id="assessment" class="page hidden">
+      <div class="card">
+        <h2>Final Assessment</h2>
+        <p>Answer all <span id="totalQ">15</span> questions. A score of <strong>80%</strong> or higher is required to pass.</p>
+        <div class="progress"><div id="bar" class="bar"></div></div>
+        <form id="quiz"></form>
+        <button class="btn" id="submitBtn" onclick="gradeQuiz()" type="button">Submit Assessment</button>
+      </div>
+      <div id="result" class="card hidden result"></div>
+    </section>
+
+    <footer>All About the USA • Interactive Training</footer>
+  </main>
+</div>
+
+<script>
+const questions=[
+["How many states are in the United States?",["48","49","50","52"],2],
+["Which two states are not part of the contiguous United States?",["Texas and Florida","Alaska and Hawaii","California and Alaska","Hawaii and California"],1],
+["New York is primarily located in which time zone?",["Pacific","Mountain","Central","Eastern"],3],
+["California is primarily located in which time zone?",["Eastern","Central","Mountain","Pacific"],3],
+["If it is 4:00 PM Eastern Time, what time is it in Central Time?",["1:00 PM","2:00 PM","3:00 PM","4:00 PM"],2],
+["If it is 10:00 AM Pacific Time, what time is it in Eastern Time?",["11:00 AM","12:00 PM","1:00 PM","2:00 PM"],2],
+["What generally happens to the clock when traveling west across the contiguous United States?",["It moves forward","It moves backward","It stays the same","It changes by two hours"],1],
+["Which city/state combination is in the Pacific Time Zone?",["Miami, Florida","Chicago, Illinois","Los Angeles, California","New York, New York"],2],
+["Which state is farthest northwest among these choices?",["Florida","Washington","Texas","Maine"],1],
+["Why is understanding U.S. time zones important in a business environment?",["It helps schedule calls and activities correctly","It determines a person's job title","It identifies a state's population","It determines the state capital"],0]
+];
+
+const quiz=document.getElementById("quiz");
+const tzDefault=new Date();
+const tzLocal=new Date(tzDefault.getTime()-tzDefault.getTimezoneOffset()*60000).toISOString().slice(0,16);
+document.getElementById("tzDateTime").value=tzLocal;
+document.getElementById("totalQ").textContent=questions.length;
+questions.forEach((q,i)=>{
+  const div=document.createElement("div"); div.className="question";
+  div.innerHTML=`<h3>${i+1}. ${q[0]}</h3>`+
+    q[1].map((o,j)=>`<label class="option"><input type="radio" name="q${i}" value="${j}"> ${o}</label>`).join("");
+  quiz.appendChild(div);
+});
+quiz.addEventListener("change",()=>{
+  const answered=[...document.querySelectorAll("input[type=radio]:checked")].length;
+  document.getElementById("bar").style.width=(answered/questions.length*100)+"%";
+});
+
+function showPage(id,btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function getZoneOffsetMs(date, timeZone){
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);
+  const map={}; parts.forEach(p=>map[p.type]=p.value);
+  const asUTC=Date.UTC(Number(map.year),Number(map.month)-1,Number(map.day),Number(map.hour),Number(map.minute),Number(map.second));
+  return asUTC-date.getTime();
+}
+function localTimeInZoneToDate(value,timeZone){
+  const [datePart,timePart]=value.split("T");
+  const [y,m,d]=datePart.split("-").map(Number);
+  const [hh,mm]=timePart.split(":").map(Number);
+  const naive=Date.UTC(y,m-1,d,hh,mm,0);
+  let candidate=new Date(naive);
+  candidate=new Date(naive-getZoneOffsetMs(candidate,timeZone));
+  candidate=new Date(naive-getZoneOffsetMs(candidate,timeZone));
+  return candidate;
+}
+function formatZoneDate(date,timeZone){
+  return new Intl.DateTimeFormat("en-US",{timeZone,weekday:"short",month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZoneName:"short"}).format(date);
+}
+function convertTimeZone(){
+  const value=document.getElementById("tzDateTime").value;
+  const from=document.getElementById("fromZone").value;
+  const to=document.getElementById("toZone").value;
+  const result=document.getElementById("tzConversionResult");
+  if(!value){ result.classList.remove("hidden"); result.innerHTML="<strong>Please select a date and time first.</strong>"; return; }
+  const date=localTimeInZoneToDate(value,from);
+  const fromText=formatZoneDate(date,from);
+  const toText=formatZoneDate(date,to);
+  result.classList.remove("hidden");
+  result.innerHTML=`<strong>${fromText}</strong><br>↓<br><strong>${toText}</strong><br><span style="color:var(--muted);font-size:13px">The converter automatically accounts for daylight-saving time where applicable.</span>`;
+}
+
+function tzAnswer(el,correct){
+  document.getElementById("tzFeedback").textContent=correct?"✓ Correct! California is three hours behind Eastern Time.":"✗ Not quite. California is three hours behind Eastern Time.";
+  document.getElementById("tzFeedback").style.color=correct?"#16834b":"#c73535";
+}
+function gradeQuiz(){
+  let score=0, unanswered=0;
+  questions.forEach((q,i)=>{
+    const selected=document.querySelector(`input[name="q${i}"]:checked`);
+    if(!selected) unanswered++;
+    else if(Number(selected.value)===q[2]) score++;
+  });
+  if(unanswered){
+    alert("Please answer all questions before submitting.");
+    return;
+  }
+  const pct=Math.round(score/questions.length*100);
+  const passed=pct>=80;
+  const result=document.getElementById("result");
+  result.classList.remove("hidden");
+  result.innerHTML=`
+    <div class="score">${pct}%</div>
+    <h2>${passed?"Assessment Passed!":"Assessment Not Passed"}</h2>
+    <p>You answered <strong>${score} of ${questions.length}</strong> questions correctly.</p>
+    <span class="badge ${passed?"pass":"fail"}">${passed?"PASS":"REVIEW & RETAKE"}</span>
+    <p style="margin-top:20px;color:#667085">Your result is ready. If you need to email this result, use the button below.</p>
+    <button class="btn" onclick="emailResult(${score},${pct},${passed})">Email Assessment Result</button>
+    <button class="btn secondary" style="margin-left:8px" onclick="window.scrollTo({top:0,behavior:'smooth'})">Review Course</button>
+  `;
+  result.scrollIntoView({behavior:"smooth"});
+}
+function emailResult(score,pct,passed){
+  const subject=encodeURIComponent("All About the USA - Assessment Result");
+  const body=encodeURIComponent(
+`All About the USA - Assessment Result
+
+Learner: 
+Score: ${score}/${questions.length}
+Percentage: ${pct}%
+Status: ${passed?"PASSED":"NOT PASSED"}
+
+Training:
+Module 1: States
+Module 2: Time Zones`
+  );
+  window.location.href=`mailto:mgomez@dealerfocus.com?subject=${subject}&body=${body}`;
+}
+</script>
+<script src="auth.js"></script><script src="bridge.js"></script></body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Progress — Dealerfocus Training Academy</title>
+<link rel="stylesheet" href="style.css"><script src="auth.js"></script>
+<style>
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 60px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
+.stat{background:#fff;border:1px solid #dfe4ee;border-radius:14px;padding:18px}
+.stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#667085}
+.stat .v{font-size:28px;font-weight:800;color:#050141;margin:4px 0}
+.bar{height:9px;background:#e6ebf4;border-radius:99px;overflow:hidden}.bar>div{height:100%;background:#1f5eff}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;font-size:14px}
+th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{background:#f4f6fb;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.badge{display:inline-block;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800}.pass{background:#dff6e9;color:#11663d}.fail{background:#fde4e4;color:#a61e2a}.pend{background:#eef1f6;color:#555}
+.modrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid #dfe4ee;border-radius:12px;padding:13px 16px;margin:8px 0}
+.btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;background:#050141;color:#fff;font-size:13px}.btn.sec{background:#e9eef8;color:#050141}
+</style>
+</head>
+<body>
+<header class="site-header sec-nav"><a class="brand" href="/"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"><span>Dealerfocus Training Academy</span></a><nav class="site-nav"><a href="/">Home</a><a href="/modules">Modules</a><a href="/sandbox">Sandbox</a><a href="/about-us">About Us</a></nav></header>
+<main class="wrap">
+<h1 id="hello" class="sec-headings">My Progress</h1>
+<p class="sec-content" style="color:#667085" id="sub">Your unique log — only you (and admins) can see this.</p>
+<div class="grid">
+<div class="stat"><div class="l">Modules complete</div><div class="v" id="sMod">—</div><div class="bar"><div id="sModBar" style="width:0%"></div></div></div>
+<div class="stat"><div class="l">Best score</div><div class="v" id="sBest">—</div><div class="bar"><div id="sBestBar" style="width:0%"></div></div></div>
+<div class="stat"><div class="l">Quiz attempts</div><div class="v" id="sAtt">—</div><div style="font-size:13px;color:#667085" id="sCert">—</div></div>
+</div>
+<h2>Modules</h2><div id="mods"></div>
+<h2>Score history (unique log)</h2>
+<table><thead><tr><th>Date</th><th>Quiz</th><th>Score</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
+<h2>Usage</h2><p style="font-size:14px;color:#444" id="usage"></p>
+<p><a class="btn sec" href="modules.html" style="text-decoration:none">Continue learning →</a> <button class="btn sec" onclick="DFAuth.logout()">Logout</button></p>
+</main>
+<footer class="site-footer sec-footer"><span>© 2026 Dealerfocus Training Academy | All rights reserved.</span></footer>
+<script>
+document.addEventListener('df:ready',function(){
+  var me=DFAuth.current(); if(!me){location.href='login.html?next=user-dashboard.html';return;}
+  document.getElementById('hello').textContent='My Progress — '+me.name;
+  var p=DFAuth.getProgress(), at=DFAuth.getAttempts(), us=DFAuth.getUsage(), set=DFAuth.getSettings();
+  var mods=set.modules||DFAuth.MODULES;
+  var done=mods.filter(function(m){return p.modules&&p.modules[m.id];}).length;
+  document.getElementById('sMod').textContent=done+'/'+mods.length;
+  document.getElementById('sModBar').style.width=Math.round(done/mods.length*100)+'%';
+  var scores=Object.keys(p.quizzes||{}).map(function(k){return p.quizzes[k].score;});
+  var best=scores.length?Math.max.apply(null,scores):null;
+  document.getElementById('sBest').textContent=best===null?'—':best+'%';
+  document.getElementById('sBestBar').style.width=(best||0)+'%';
+  document.getElementById('sAtt').textContent=at.length;
+  document.getElementById('sCert').textContent=DFAuth.isCertified()?'🏅 Certified':'Pass mark: '+set.passPct+'%';
+  document.getElementById('mods').innerHTML=mods.map(function(m){
+    var d=p.modules&&p.modules[m.id]; var q=p.quizzes&&p.quizzes[m.quiz];
+    return '<div class="modrow"><div><b>'+DFAuth.esc(m.title)+'</b><div style="font-size:13px;color:#667085">Score: '+(q?q.score+'%'+(q.passed?' ✓':' (need '+set.passPct+'%)'):'not attempted')+'</div></div><div>'+(d?'<span class="badge pass">Done</span>':'<button class="btn" onclick="DFAuth.markModule(\''+m.id+'\');location.reload()">Mark done</button>')+' <a class="btn sec" style="text-decoration:none" href="'+m.href+'">Open</a></div></div>';
+  }).join('');
+  document.getElementById('rows').innerHTML=at.length?at.slice().reverse().map(function(a){
+    return '<tr><td>'+new Date(a.at).toLocaleString()+'</td><td>'+DFAuth.esc(a.quiz)+'</td><td>'+a.score+'%</td><td><span class="badge '+(a.passed?'pass':'fail')+'">'+(a.passed?'Passed':'Not passed')+'</span></td></tr>';
+  }).join(''):'<tr><td colspan="4">No attempts yet.</td></tr>';
+  var dwellMin = us.dwell ? Math.round(Object.keys(us.dwell).reduce(function(s,k){return s+us.dwell[k];},0)/60) : 0;
+  document.getElementById('usage').textContent='Logins: '+us.logins.length+' • Time in training: ~'+dwellMin+' min • Page views: '+us.views.length+' • Last views: '+(us.views.slice(-5).map(function(v){return v.page;}).join(', ')||'—');
+});
+</script>
+</body>
+</html>

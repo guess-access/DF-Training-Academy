@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Dealerfocus Training Academy</title>
+<link rel="stylesheet" href="style.css"><script src="auth.js"></script>
+<style>
+.auth-wrap{max-width:460px;margin:48px auto;padding:0 20px}
+.auth-card{background:#fff;border:1px solid #dfe4ee;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(10,30,70,.08)}
+.auth-card h1{margin:0 0 6px;font-size:24px;color:#050141}
+.auth-card p.sub{margin:0 0 18px;color:#667085;font-size:14px}
+.auth-card label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px;color:#050141}
+.auth-card input{width:100%;padding:11px 12px;border:1px solid #cfd7e5;border-radius:9px;font-size:15px;box-sizing:border-box}
+.auth-card button{width:100%;margin-top:16px;padding:12px;border:0;border-radius:9px;background:#050141;color:#fff;font-weight:800;cursor:pointer;font-size:15px}
+.auth-card button.sec{background:#e9eef8;color:#050141}
+.auth-err{background:#fde4e4;color:#a61e2a;border-radius:8px;padding:10px 12px;font-size:13px;margin-top:12px;display:none}
+.auth-ok{background:#dff6e9;color:#11663d;border-radius:8px;padding:10px 12px;font-size:13px;margin-top:12px;display:none}
+.tabs{display:flex;gap:8px;margin-bottom:6px}
+.tabs button{flex:1;padding:10px;border-radius:9px;border:1px solid #dfe4ee;background:#f4f6fb;cursor:pointer;font-weight:700}
+.tabs button.on{background:#050141;color:#fff;border-color:#050141}
+.demo{font-size:12.5px;color:#667085;background:#f4f7fb;border-radius:9px;padding:10px 12px;margin-top:14px;line-height:1.6}
+</style>
+</head>
+<body>
+<header class="site-header sec-nav"><a class="brand" href="/"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"><span>Dealerfocus Training Academy</span></a><nav class="site-nav"><a href="/">Home</a><a href="/modules">Modules</a><a href="/sandbox">Sandbox</a><a href="/about-us">About Us</a></nav></header>
+<main class="auth-wrap">
+<div class="auth-card">
+<div style="text-align:center;margin-bottom:14px"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo" style="height:64px;width:auto"></div>
+<h1 class="sec-headings" style="text-align:center">Welcome back</h1>
+<p class="sub">Log in to track your progress and scores. Admins get full results view.</p>
+<div class="tabs"><button id="tLogin" class="on" type="button">Log in</button><button id="tSignup" type="button">Sign up</button></div>
+<div id="fLogin">
+<label>Email</label><input id="liEmail" type="email" placeholder="you@company.com">
+<label>Password</label><input id="liPass" type="password" placeholder="••••••••">
+<button type="button" onclick="doLogin()">Log in</button>
+</div>
+<div id="fSignup" style="display:none">
+<label>Full name</label><input id="suName" type="text" placeholder="Juan Dela Cruz">
+<label>Email</label><input id="suEmail" type="email" placeholder="you@company.com">
+<label>Password (min 6)</label><input id="suPass" type="password" placeholder="Create password">
+<label>Admin code (optional — users leave blank)</label><input id="suCode" type="text" placeholder="Only for admins">
+<button type="button" onclick="doSignup()">Create account</button>
+</div>
+<div class="auth-err" id="err"></div><div class="auth-ok" id="ok"></div>
+<div class="demo"><b>Demo accounts (seeded):</b><br>Admin — admin@dealerfocus.com / Admin123!<br>User — user@dealerfocus.com / User123!<br>Admin signup code: <b>DEALER-ADMIN-2026</b> (change in auth.js)</div>
+</div>
+</main>
+<footer class="site-footer sec-footer"><span>© 2026 Dealerfocus Training Academy | All rights reserved.</span></footer>
+<script>
+var mode='login';
+document.getElementById('tLogin').onclick=function(){mode='login';this.classList.add('on');document.getElementById('tSignup').classList.remove('on');document.getElementById('fLogin').style.display='block';document.getElementById('fSignup').style.display='none';};
+document.getElementById('tSignup').onclick=function(){mode='signup';this.classList.add('on');document.getElementById('tLogin').classList.remove('on');document.getElementById('fSignup').style.display='block';document.getElementById('fLogin').style.display='none';};
+function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;document.getElementById('ok').style.display='none';}
+function showOk(m){var e=document.getElementById('ok');e.style.display='block';e.textContent=m;document.getElementById('err').style.display='none';}
+function next(){var q=new URLSearchParams(location.search).get('next');return q||null;}
+function go(u){var n=next();if(n){location.href=n;return;}location.href=(u.role==='admin')?'admin-dashboard.html':'user-dashboard.html';}
+async function doLogin(){var r=await DFAuth.login(document.getElementById('liEmail').value,document.getElementById('liPass').value);if(r.error)showErr(r.error);else{showOk('Logged in. Redirecting…');setTimeout(function(){go(r.user);},400);}}
+async function doSignup(){var r=await DFAuth.signup(document.getElementById('suName').value,document.getElementById('suEmail').value,document.getElementById('suPass').value,document.getElementById('suCode').value.trim());if(r.error)showErr(r.error);else{showOk('Account created as '+r.user.role+'. Redirecting…');setTimeout(function(){go(r.user);},400);}}
+document.addEventListener('df:ready',function(){var me=DFAuth.current();if(me&&!next())go(me);});
+</script>
+</body>
+</html>

@@ -17,11 +17,8 @@ th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{backg
 .modrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid #dfe4ee;border-radius:12px;padding:13px 16px;margin:8px 0}
 .btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;background:#050141;color:#fff;font-size:13px}.btn.sec{background:#e9eef8;color:#050141}
 .mods-panel{margin:24px 0;border:1px solid #dfe4ee;border-radius:14px;background:#fff}
-.mods-panel summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:16px 20px;user-select:none}
-.mods-panel summary::-webkit-details-marker{display:none}
-.mods-panel summary:focus-visible{outline:3px solid #00eeff;outline-offset:2px;border-radius:14px}
+.mp-head{display:flex;align-items:center;gap:12px;padding:16px 20px}
 .mp-title{font-size:21px;font-weight:800;color:#050141}.mp-sum{margin-left:auto;font-size:14px;font-weight:700;color:#667085}
-.mp-chev{width:22px;height:22px;color:#667085;transition:transform .25s}.mods-panel[open] .mp-chev{transform:rotate(180deg)}
 .mp-rule{margin:0;padding:0 20px 8px;font-size:13.5px;color:#667085}#mods{padding:0 20px 12px}
 .modcard{border:1px solid #dfe4ee;border-radius:12px;padding:14px 16px;margin:10px 0}
 .mc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
@@ -41,9 +38,9 @@ th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{backg
 <div class="stat"><div class="l">Quiz attempts</div><div class="v" id="sAtt">—</div><div style="font-size:13px;color:#667085" id="sCert">—</div></div>
 </div>
 <h2>Step 1: About Us</h2><div id="aboutRow"></div>
-<details class="mods-panel"><summary><span class="mp-title">Modules</span><span class="mp-sum" id="modsSum"></span><svg class="mp-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+<section class="mods-panel"><div class="mp-head"><span class="mp-title">Modules</span><span class="mp-sum" id="modsSum"></span></div>
 <p class="mp-rule">A module is marked <b>Completed</b> automatically when Completion Rate reaches 100% and the Assessment Score meets the pass mark.</p>
-<div id="mods"></div></details>
+<div id="mods"></div></section>
 <h2>Score history (unique log)</h2>
 <table><thead><tr><th>Date</th><th>Quiz</th><th>Score</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
 <h2>Usage</h2><p style="font-size:14px;color:#444" id="usage"></p>

@@ -52,7 +52,7 @@ document.addEventListener('df:ready',function(){
   document.getElementById('sCert').textContent=DFAuth.isCertified()?'🏅 Certified':'Pass mark: '+set.passPct+'%';
   document.getElementById('mods').innerHTML=mods.map(function(m){
     var d=p.modules&&p.modules[m.id]; var q=p.quizzes&&p.quizzes[m.quiz];
-    return '<div class="modrow"><div><b>'+DFAuth.esc(m.title)+'</b><div style="font-size:13px;color:#667085">Score: '+(q?q.score+'%'+(q.passed?' ✓':' (need '+set.passPct+'%)'):'not attempted')+'</div></div><div>'+(d?'<span class="badge pass">Done</span>':'<button class="btn" onclick="DFAuth.markModule(\''+m.id+'\');location.reload()">Mark done</button>')+' <a class="btn sec" style="text-decoration:none" href="'+m.href+'">Open</a></div></div>';
+    return '<div class="modrow"><div><b>'+DFAuth.esc(m.title)+'</b><div style="font-size:13px;color:#667085">Score: '+(q?q.score+'%'+(q.passed?' ✓':' (need '+set.passPct+'%)'):'not attempted')+'</div></div><div>'+(d?'<span class="badge pass">Done</span>':'<button class="btn" onclick="DFAuth.markModule(\''+m.id+'\');DFAuth.flush().then(function(){location.reload()})">Mark done</button>')+' <a class="btn sec" style="text-decoration:none" href="'+m.href+'">Open</a></div></div>';
   }).join('');
   document.getElementById('rows').innerHTML=at.length?at.slice().reverse().map(function(a){
     return '<tr><td>'+new Date(a.at).toLocaleString()+'</td><td>'+DFAuth.esc(a.quiz)+'</td><td>'+a.score+'%</td><td><span class="badge '+(a.passed?'pass':'fail')+'">'+(a.passed?'Passed':'Not passed')+'</span></td></tr>';

@@ -41,7 +41,7 @@ document.addEventListener('df:ready',function(){
   document.getElementById('passIn').value=DFAuth.getSettings().passPct;
   refresh();
 });
-function refresh(){var r=DFAuth.admin.list();if(r.error){alert(r.error);return;}DATA=r;render();kpis();}
+async function refresh(){var r=await DFAuth.admin.list();if(r.error){alert(r.error);return;}DATA=r;render();kpis();}
 function kpis(){document.getElementById('kU').textContent=DATA.length;document.getElementById('kC').textContent=DATA.filter(function(u){return u.certified;}).length;document.getElementById('kA').textContent=DATA.reduce(function(s,u){return s+u.attempts;},0);document.getElementById('kP').textContent=DFAuth.getSettings().passPct+'%';}
 function render(){
   var q=(document.getElementById('q').value||'').toLowerCase(), f=document.getElementById('f').value;
@@ -50,8 +50,8 @@ function render(){
     return '<tr><td><b>'+DFAuth.esc(u.name)+'</b></td><td>'+DFAuth.esc(u.email)+'</td><td><span class="badge '+(u.role==='admin'?'a':'u')+'">'+u.role+'</span></td><td>'+u.modulesDone+'</td><td>'+(u.best===null?'—':u.best+'%')+'</td><td>'+u.attempts+'</td><td>'+u.logins+'</td><td>'+(u.lastActive?new Date(u.lastActive).toLocaleString():'—')+'</td><td><span class="badge '+(u.certified?'c':'nc')+'">'+(u.certified?'Certified':'In progress')+'</span></td><td><button class="btn" onclick="openUser(\''+u.id+'\')">View / edit</button></td></tr>';
   }).join('')||'<tr><td colspan="10">No users.</td></tr>';
 }
-function openUser(id){
-  var r=DFAuth.admin.get(id); if(r.error){alert(r.error);return;}
+async function openUser(id){
+  var r=await DFAuth.admin.get(id); if(r.error){alert(r.error);return;}
   var mods=(DFAuth.getSettings().modules||DFAuth.MODULES);
   var h='<h2>'+DFAuth.esc(r.user.name)+' <small style="color:#667085">'+DFAuth.esc(r.user.email)+' • '+r.user.role+'</small></h2>';
   h+='<p>Certified: <b>'+(r.certified?'Yes 🏅':'No')+'</b></p>';
@@ -62,11 +62,11 @@ function openUser(id){
   h+='<h3>Usage</h3><p style="font-size:13px">Logins: '+r.usage.logins.length+' • Time in training: ~'+dw+' min • Views: '+r.usage.views.length+'<br>Recent: '+DFAuth.esc(r.usage.views.slice(-10).map(function(v){return v.page;}).join(', '))+'</p>';
   var d=document.getElementById('detail');d.style.display='block';d.innerHTML=h;d.scrollIntoView({behavior:'smooth'});
 }
-function setScore(id,quiz){var v=document.getElementById('sc_'+quiz).value;if(v===''){alert('Enter 0-100');return;}var r=DFAuth.admin.setScore(id,quiz,v);if(r.error)alert(r.error);else{refresh();openUser(id);}}
-function toggleRole(id,cur){DFAuth.admin.setRole(id,cur==='admin'?'user':'admin');refresh();}
-function resetU(id){if(!confirm('Reset this user progress + attempts?'))return;DFAuth.admin.reset(id);refresh();openUser(id);}
-function delU(id){if(!confirm('Delete user? Cannot undo.'))return;var r=DFAuth.admin.del(id);if(r.error)alert(r.error);else{document.getElementById('detail').style.display='none';refresh();}}
-function savePass(){var v=Number(document.getElementById('passIn').value);if(!(v>=1&&v<=100)){alert('Enter 1-100');return;}DFAuth.admin.saveSettings(Object.assign(DFAuth.getSettings(),{passPct:v}));refresh();}
+async function setScore(id,quiz){var v=document.getElementById('sc_'+quiz).value;if(v===''){alert('Enter 0-100');return;}var r=await DFAuth.admin.setScore(id,quiz,v);if(r.error)alert(r.error);else{await refresh();openUser(id);}}
+async function toggleRole(id,cur){var r=await DFAuth.admin.setRole(id,cur==='admin'?'user':'admin');if(r.error)alert(r.error);await refresh();}
+async function resetU(id){if(!confirm('Reset this user progress + attempts?'))return;var r=await DFAuth.admin.reset(id);if(r.error)alert(r.error);await refresh();openUser(id);}
+async function delU(id){if(!confirm('Delete user? Cannot undo.'))return;var r=await DFAuth.admin.del(id);if(r.error)alert(r.error);else{document.getElementById('detail').style.display='none';await refresh();}}
+async function savePass(){var v=Number(document.getElementById('passIn').value);if(!(v>=1&&v<=100)){alert('Enter 1-100');return;}var r=await DFAuth.admin.saveSettings({passPct:v});if(r.error)alert(r.error);await refresh();}
 function exportCSV(){var csv='name,email,role,modules,best,attempts,logins,lastActive,certified\n'+DATA.map(function(u){return [u.name,u.email,u.role,u.modulesDone,u.best==null?'':u.best,u.attempts,u.logins,u.lastActive||'',u.certified?'yes':'no'].map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n');var b=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='dealerfocus-users.csv';a.click();}
 </script>
 </body>

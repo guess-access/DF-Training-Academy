@@ -226,7 +226,7 @@
         '<a href="' + dash + '" style="border-radius:8px;padding:8px 12px;font-weight:800;background:transparent;color:#fff;border:1px solid #fff;text-decoration:none;font-size:13px">My progress</a>' +
         '</div>';
       document.body.appendChild(div);
-      document.getElementById("dfDone").onclick = function () { DF().markModule(ctx.module, !done); location.reload(); };
+      document.getElementById("dfDone").onclick = function () { DF().markModule(ctx.module, !done); DF().flush().then(function () { location.reload(); }); };
       document.getElementById("dfScore").onclick = function () {
         var v = prompt("Enter your quiz score 0-100 for " + ctx.quiz + ":");
         if (v === null) return;
@@ -234,7 +234,7 @@
         if (!(v >= 0 && v <= 100)) { alert("Enter 0-100"); return; }
         DF().logQuiz(ctx.quiz, v, 100, { page: location.pathname, manual: true });
         if (v >= passPct()) DF().markModule(ctx.module, true);
-        location.reload();
+        DF().flush().then(function () { location.reload(); });
       };
     } catch (e) {}
   }

@@ -27,6 +27,7 @@
       attempts: [],
       usage: { views: [], logins: [], dwell: {} },
       completion: {},
+      certificate: null,
       about: { completed: false, videoPct: 0, pageSec: 0, minSec: 300, skips: 0, duration: 0 },
       settings: { passPct: PASS_DEFAULT, aboutGate: false, aboutMinSec: 300 }
     };
@@ -39,6 +40,7 @@
       attempts: r.attempts || e.attempts,
       usage: r.usage || e.usage,
       completion: r.completion || e.completion,
+      certificate: r.certificate || null,
       about: r.about || e.about,
       settings: r.settings || e.settings
     };
@@ -127,7 +129,22 @@
 
   /* ---- progress ---- */
   function markModule() { /* Modules are flagged Completed automatically by the server (100% completion + passing score). */ }
-  function paceReport(payload) { if (S.user) write("pace", payload); }
+  function paceReport(payload) {
+    if (!S.user) return;
+    var c = S.completion[payload.module] = S.completion[payload.module] || { pages: {}, total: payload.total, pct: 0 };
+    if (payload.pct > (c.pages[payload.page] || 0)) c.pages[payload.page] = payload.pct;
+    c.total = payload.total;
+    var sum = Object.keys(c.pages).reduce(function (a, k) { return a + Math.min(100, c.pages[k]); }, 0);
+    c.pct = Math.min(100, Math.floor(sum / c.total));
+    write("pace", payload);
+  }
+  /** Ask the server to issue the certificate if everything is complete. Resolves to the certificate or null. */
+  function checkCertificate() {
+    return flush().then(function () { return api("POST", "certificate", {}); }).then(function (r) {
+      if (r && r.certificate) S.certificate = r.certificate;
+      return S.certificate;
+    });
+  }
 
   function logQuiz(quizId, score, total, extra) {
     if (!S.user) return null;
@@ -145,9 +162,7 @@
 
   function isCertified() {
     var p = S.progress;
-    var ok = ["m1", "m2", "m3", "m4"].every(function (m) { return p.modules[m]; });
-    var f = p.quizzes.quiz_final;
-    return !!(ok && f && f.score >= S.settings.passPct);
+    return ["m1", "m2", "m3", "m4", "m5"].every(function (m) { return p.modules[m]; });
   }
 
   /* ---- admin ops (the server rejects non-admins; these are just thin wrappers) ---- */
@@ -239,6 +254,7 @@
     isCertified: function () { return S.user ? isCertified() : false; },
     getSettings: getSettings, MODULES: MODULES,
     getCompletion: function () { return S.user ? S.completion : null; }, paceReport: paceReport,
+    getCertificate: function () { return S.user ? S.certificate : null; }, checkCertificate: checkCertificate,
     getAbout: function () { return S.user ? S.about : null; }, gateBlocked: gateBlocked, aboutBeat: aboutBeat,
     // run fn once session + data are loaded; works whether that already happened or not (a late-loading
     // script can miss the one-time "df:ready" event, so pages use this instead of listening for it)

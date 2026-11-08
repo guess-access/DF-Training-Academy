@@ -142,67 +142,6 @@
     } catch (e) {}
   }
 
-  /* ---- Module 05 certification: two-way sync with per-user log ---- */
-  var certReverseDone = false;
-  function syncCertToUser() {
-    try {
-      if (!me()) return;
-      if (!/module-05-certification/i.test(location.pathname)) return;
-      var checks = document.querySelectorAll("#moduleList .cert-check");
-      var ids = ["m1", "m2", "m3", "m4"];
-      checks.forEach(function (c, i) { if (ids[i]) DF().markModule(ids[i], c.classList.contains("done")); });
-      if (DF().isCertified()) DF().markModule("m5", true);
-    } catch (e) {}
-  }
-  function syncUserToCert() {
-    // If modules were completed in their own trainings, reflect them on the cert checklist.
-    try {
-      if (certReverseDone || !me()) return;
-      if (!/module-05-certification/i.test(location.pathname)) return;
-      var p = DF().getProgress();
-      if (!p || !p.modules) return;
-      var btns = document.querySelectorAll('#moduleList [data-toggle]');
-      if (!btns.length) return; // legacy list not rendered yet
-      certReverseDone = true;
-      var ids = ["m1", "m2", "m3", "m4"];
-      var checks = document.querySelectorAll("#moduleList .cert-check");
-      checks.forEach(function (c, i) {
-        if (ids[i] && p.modules[ids[i]] && !c.classList.contains("done")) {
-          var b = document.querySelector('#moduleList [data-toggle="' + ids[i] + '"]');
-          if (b) b.click();
-        }
-      });
-    } catch (e) {}
-  }
-  function hookCert() {
-    try {
-      if (typeof window.submitQuiz === "function" && !window.submitQuiz.__df) {
-        var orig = window.submitQuiz;
-        window.submitQuiz = function (kind) {
-          var r = orig.apply(this, arguments);
-          try {
-            if (me()) {
-              setTimeout(function () {
-                try {
-                  var el = document.getElementById("writtenScoreDisplay");
-                  var m = el ? el.textContent.match(/(\d+)%/) : null;
-                  if (m) {
-                    DF().logQuiz("quiz_final", Number(m[1]), 100, { page: "certification" });
-                    if (Number(m[1]) >= passPct()) syncCertToUser();
-                  }
-                } catch (e) {}
-              }, 300);
-            }
-          } catch (e) {}
-          return r;
-        };
-        window.submitQuiz.__df = true;
-      }
-    } catch (e) {}
-    try { setInterval(syncCertToUser, 2500); } catch (e) {}
-    try { setTimeout(syncUserToCert, 1200); setTimeout(syncUserToCert, 3500); } catch (e) {}
-  }
-
   /* ---- floating tracker: same module pipeline, links to progress page ---- */
   function widget(ctx) {
     try {
@@ -221,11 +160,12 @@
         '<div style="font-weight:800;margin:4px 0">' + (done ? '✓ Completed' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
         '<div style="font-size:12px;opacity:.75">Quiz + activity feed your progress page automatically.</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
-        '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' +
+        (ctx.module === "m1" || ctx.module === "m2" ? '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' : '') +
         '<a href="' + dash + '" style="border-radius:8px;padding:8px 12px;font-weight:800;background:transparent;color:#fff;border:1px solid #fff;text-decoration:none;font-size:13px">My progress</a>' +
         '</div>';
       document.body.appendChild(div);
-      document.getElementById("dfScore").onclick = function () {
+      var logBtn = document.getElementById("dfScore");
+      if (logBtn) logBtn.onclick = function () {
         var v = prompt("Enter your quiz score 0-100 for " + ctx.quiz + ":");
         if (v === null) return;
         v = Number(v);
@@ -243,7 +183,6 @@
     hookGradeQuiz(ctx);
     hookM2(ctx);
     hookCSR(ctx);
-    if (/module-05-certification/i.test(location.pathname)) hookCert();
     widget(ctx);
   });
 })();

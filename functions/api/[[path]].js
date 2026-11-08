@@ -7,7 +7,6 @@
 
 const MODULE_IDS = ["m1", "m2", "m3", "m4", "m5", "m6"];
 const QUIZ_IDS = ["quiz_m1_usa", "quiz_m2_vehicle", "quiz_m3_tools", "quiz_m4_csr", "quiz_final", "quiz_m6_refresh"];
-const CORE_MODULES = ["m1", "m2", "m3", "m4"];
 const REQUIRED_MODULES = ["m1", "m2", "m3", "m4", "m5"]; // Module 6 (Refresher) is optional
 // assessment that decides each module; null = the module has no assessment, so 100% completion alone completes it
 const MODULE_QUIZ = { m1: "quiz_m1_usa", m2: "quiz_m2_vehicle", m3: null, m4: "quiz_m4_csr", m5: "quiz_final", m6: null };
@@ -187,6 +186,7 @@ async function buildUserData(env, userId) {
     const q = progress.quizzes[MODULE_QUIZ[m]];
     if (moduleCompleted(m, completion[m], q ? q.score : null, passPctNow)) progress.modules[m] = { done: true, at: completion[m].at };
   });
+  const certRow = await env.DB.prepare("SELECT cert_no, name, score, issued_at FROM certificates WHERE user_id = ?").bind(userId).first();
   const cfgAbout = await getAboutCfg(env);
   const aboutRow = await env.DB.prepare("SELECT coverage, page_sec, duration, violations, completed_at, last_pos, last_playing, ended FROM about_progress WHERE user_id = ?").bind(userId).first();
   const usage = {
@@ -205,14 +205,30 @@ async function buildUserData(env, userId) {
     }),
     usage,
     completion,
+    certificate: certRow ? { certNo: certRow.cert_no, name: certRow.name, score: certRow.score, issuedAt: certRow.issued_at } : null,
     about: aboutSummary(aboutRow, cfgAbout)
   };
 }
 
-function isCertified(progress, passPct) {
-  const ok = CORE_MODULES.every((m) => progress.modules[m]);
-  const f = progress.quizzes.quiz_final;
-  return !!(ok && f && f.score >= passPct);
+function isCertified(progress) {
+  return REQUIRED_MODULES.every((m) => progress.modules[m]);
+}
+
+/** Issue the Graduation Certificate once all required modules are Completed. One per user; number and date never change. */
+async function issueCertificate(env, user, data) {
+  if (data.certificate) return data.certificate;
+  if (user.role === "admin" || !isCertified(data.progress)) return null;
+  const q = data.progress.quizzes.quiz_final;
+  const score = q ? q.score : 0, issuedAt = nowISO();
+  const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let tries = 0; tries < 5; tries++) {
+    const rnd = crypto.getRandomValues(new Uint8Array(6));
+    const certNo = "DFA-" + issuedAt.slice(0, 4) + "-" + Array.from(rnd, (b) => ABC[b % ABC.length]).join("");
+    await env.DB.prepare("INSERT OR IGNORE INTO certificates (user_id, cert_no, name, score, issued_at) VALUES (?,?,?,?,?)").bind(user.id, certNo, user.name, score, issuedAt).run();
+    const row = await env.DB.prepare("SELECT cert_no, name, score, issued_at FROM certificates WHERE user_id = ?").bind(user.id).first();
+    if (row) return { certNo: row.cert_no, name: row.name, score: row.score, issuedAt: row.issued_at };
+  }
+  return null;
 }
 
 async function buildState(env, user) {
@@ -221,6 +237,7 @@ async function buildState(env, user) {
   const settings = { passPct, aboutGate: cfg.gate, aboutMinSec: cfg.minSec };
   if (!user) return { user: null, settings };
   const data = await buildUserData(env, user.id);
+  data.certificate = await issueCertificate(env, user, data);
   return { user, settings, ...data };
 }
 
@@ -477,7 +494,6 @@ async function adminUsers(env) {
     `SELECT u.id, u.name, u.email, u.role, u.created_at, u.logins, u.last_active,
        (SELECT COUNT(*) FROM attempts a WHERE a.user_id = u.id) AS attempts,
        (SELECT MAX(score) FROM quizzes q WHERE q.user_id = u.id) AS best,
-       (SELECT score FROM quizzes q WHERE q.user_id = u.id AND q.quiz_id = 'quiz_final') AS final,
        (SELECT completed_at FROM about_progress a WHERE a.user_id = u.id) AS about_done
      FROM users u ORDER BY u.created_at`
   ).all();
@@ -492,7 +508,7 @@ async function adminUsers(env) {
   return json(results.map((r) => ({
     id: r.id, name: r.name, email: r.email, role: r.role, createdAt: r.created_at,
     logins: r.logins, lastActive: r.last_active, modulesDone: doneFor(r.id).filter((m) => REQUIRED_MODULES.indexOf(m) >= 0).length + "/" + REQUIRED_MODULES.length,
-    attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: CORE_MODULES.every((m) => doneFor(r.id).indexOf(m) >= 0) && r.final !== null && r.final >= passPct
+    attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: REQUIRED_MODULES.every((m) => doneFor(r.id).indexOf(m) >= 0)
   })));
 }
 
@@ -504,7 +520,7 @@ async function adminUser(env, url) {
   const data = await buildUserData(env, id);
   return json({
     user: { id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.created_at },
-    ...data, certified: isCertified(data.progress, passPct)
+    ...data, certified: isCertified(data.progress)
   });
 }
 
@@ -569,6 +585,7 @@ async function adminAction(action, req, env, me) {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM certificates WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id)
     ]);
@@ -590,6 +607,7 @@ async function adminAction(action, req, env, me) {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM certificates WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM usage_events WHERE user_id = ?").bind(id),
@@ -632,6 +650,10 @@ export async function onRequest(context) {
 
     if (method === "POST" && route === "module") return await setModule(request, env, me);
     if (method === "POST" && route === "pace") return await paceReport(request, env, me);
+    if (method === "POST" && route === "certificate") {
+      const data = await buildUserData(env, me.id);
+      return json({ certificate: await issueCertificate(env, me, data) });
+    }
     if (method === "POST" && route === "quiz") return await logQuiz(request, env, me);
     if (method === "POST" && route === "usage") return await logUsage(request, env, me);
     if (method === "POST" && route === "about/beat") return await aboutBeat(request, env, me);

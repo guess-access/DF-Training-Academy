@@ -57,20 +57,10 @@
 .cert-opt input{margin-right:9px;}
 .cert-final{border:1px solid rgba(128,128,128,.25);border-radius:16px;padding:28px;margin-top:8px;}
 .cert-final-score{font-family:var(--font-display);font-size:44px;font-weight:700;margin:6px 0;}
-.cert-certificate{margin-top:22px;border:2px solid var(--color-accent);border-radius:16px;padding:40px;text-align:center;background:linear-gradient(145deg, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent);}
-.cert-certificate .cert-crest{font-size:38px;margin-bottom:6px;}
-.cert-certificate h2{font-family:var(--font-display);font-size:26px;margin:6px 0;}
-.cert-certificate .cert-name{font-family:var(--font-display);font-size:32px;font-weight:700;margin:16px 0;color:var(--color-accent);}
-.cert-certificate .cert-meta{font-size:13px;opacity:.7;margin-top:18px;}
 .cert-name-input{padding:11px 14px;border-radius:9px;border:1px solid rgba(128,128,128,.35);font-size:14px;width:100%;max-width:320px;background:transparent;color:inherit;}
 .cert-btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;}
 .cert-btn-secondary{font-size:13px;font-weight:700;padding:11px 18px;border-radius:9px;border:1px solid rgba(128,128,128,.35);background:transparent;cursor:pointer;color:inherit;}
 .cert-btn-secondary:hover{border-color:var(--color-accent);}
-@media print{
-  header.site-header, footer.site-footer, .back-link, .cert-overview, .cert-section:not(.cert-print-only), .cert-btn-row{display:none !important;}
-  .cert-print-only{display:block !important;}
-  body{padding:0;}
-}
 </style>
 </head>
 <body>
@@ -85,7 +75,7 @@
   <a class='back-link' href='/modules'>&larr; Back to Modules</a>
   <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 05</p>
   <h1 class="sec-headings">Certification</h1>
-  <div class="body-text sec-content">Track your progress toward CSR certification. Complete all required modules and pass each assessment with 80% or higher to earn your certification badge.</div>
+  <div class="body-text sec-content">Track your progress toward graduation. Complete all required modules and pass the final assessment to earn your Graduation Certificate.</div>
 
   <div class="cert-app" id="certApp">
 
@@ -108,13 +98,13 @@
 
     <div class="cert-section">
       <h2>Required Modules</h2>
-      <p class="cert-section-sub">Mark each module complete once you've finished it. All four are required before you can be certified.</p>
+      <p class="cert-section-sub">These four modules must be Completed first. They are marked automatically when you finish them.</p>
       <div class="cert-module-list" id="moduleList"></div>
     </div>
 
     <div class="cert-section">
       <h2>Final Certification</h2>
-      <p class="cert-section-sub">Pass the assessment below with 80% or higher to complete your certification.</p>
+      <p class="cert-section-sub">Pass the assessment below to complete your certification.</p>
       <div class="cert-assess-grid">
 
         <div class="cert-assess-card">
@@ -135,7 +125,7 @@
         <p class="cert-stat-label" style="margin:0;">Final Score (Final Written Assessment)</p>
         <p class="cert-final-score" id="finalScoreBig">—</p>
         <div class="cert-progress-track"><div class="cert-progress-fill" id="finalScoreBar" style="width:0%"></div></div>
-        <p id="finalRequirementNote" style="font-size:13px;opacity:.7;margin-top:12px;">Complete all 4 modules and score 80% or higher on the assessment to earn your certification badge.</p>
+        <p id="finalRequirementNote" style="font-size:13px;opacity:.7;margin-top:12px;"></p>
 
         <div id="certificateArea"></div>
       </div>
@@ -149,11 +139,9 @@
   
 </footer>
 
+<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script><script src="certificate.js"></script>
 <script>
 (function(){
-  const STORAGE_KEY = "dfCert_v1";
-  const PASS = 80;
-
   const moduleDefs = [
     {id:"m1", name:"Module 01 — All About the USA", href:"module-01-usa.html"},
     {id:"m2", name:"Module 02 — Vehicle 101", href:"module-02-vehicle101.html"},
@@ -174,49 +162,21 @@
     {q:"Which best separates a recall from routine maintenance?", opts:["Recalls are scheduled by the customer","Recalls address a manufacturer-identified issue, unlike routine service","They are exactly the same thing","Maintenance is always free"], a:1}
   ];
 
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw) return JSON.parse(raw);
-    }catch(e){}
-    return {modules:{m1:false,m2:false,m3:false,m4:false}, written:{score:null}, name:""};
-  }
-  let state = loadState();
-
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); render(); }
+  let mounted = false;
+  const $ = (id) => document.getElementById(id);
+  const passMark = () => DFAuth.getSettings().passPct;
+  const progress = () => DFAuth.getProgress() || {modules:{}, quizzes:{}};
+  const pctOf = (id) => ((DFAuth.getCompletion()||{})[id]||{}).pct || 0;
 
   function renderModules(){
-    const list = document.getElementById("moduleList");
-    list.innerHTML = "";
-    moduleDefs.forEach(m=>{
-      const done = !!state.modules[m.id];
-      const row = document.createElement("div");
-      row.className = "cert-module-row";
-      row.innerHTML =
-        '<div class="cert-module-info">'+
-          '<div class="cert-check'+(done?' done':'')+'" data-id="'+m.id+'">'+(done?'✓':'')+'</div>'+
-          '<span class="cert-module-name">'+m.name+'</span>'+
-        '</div>'+
-        '<div class="cert-module-actions">'+
-          '<a class="cert-link" href="'+m.href+'">Open module &rarr;</a>'+
-          '<button type="button" class="cert-toggle-btn" data-toggle="'+m.id+'">'+(done?'Mark Incomplete':'Mark Complete')+'</button>'+
-        '</div>';
-      list.appendChild(row);
-    });
-    list.querySelectorAll("[data-toggle]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const id = btn.getAttribute("data-toggle");
-        state.modules[id] = !state.modules[id];
-        save();
-      });
-    });
-    list.querySelectorAll(".cert-check").forEach(chk=>{
-      chk.addEventListener("click", ()=>{
-        const id = chk.getAttribute("data-id");
-        state.modules[id] = !state.modules[id];
-        save();
-      });
-    });
+    const p = progress();
+    $("moduleList").innerHTML = moduleDefs.map(m=>{
+      const done = !!p.modules[m.id];
+      return '<div class="cert-module-row"><div class="cert-module-info"><div class="cert-check'+(done?' done':'')+'">'+(done?'✓':'')+'</div>'+
+        '<span class="cert-module-name">'+m.name+'</span></div><div class="cert-module-actions">'+
+        '<span class="cert-badge-pill '+(done?'cert-badge-earned':'cert-badge-progress')+'">'+(done?'Completed':pctOf(m.id)+'% complete')+'</span>'+
+        '<a class="cert-link" href="'+m.href+'">Open module &rarr;</a></div></div>';
+    }).join('');
   }
 
   function buildQuizHTML(kind, questions){
@@ -233,9 +193,8 @@
   }
 
   window.toggleQuiz = function(kind){
-    const box = document.getElementById(kind+"Quiz");
-    const isHidden = box.classList.contains("hidden");
-    if(isHidden){
+    const box = $(kind+"Quiz");
+    if(box.classList.contains("hidden")){
       box.innerHTML = buildQuizHTML(kind, writtenQuestions);
       box.classList.remove("hidden");
       box.querySelectorAll(".cert-opt").forEach(label=>{
@@ -246,119 +205,73 @@
           label.querySelector("input").checked = true;
         });
       });
-      document.getElementById(kind+"StartBtn").textContent = "Hide Assessment";
+      $(kind+"StartBtn").textContent = "Hide Assessment";
     } else {
       box.classList.add("hidden");
       box.innerHTML = "";
-      document.getElementById(kind+"StartBtn").textContent = "Retake Assessment";
+      $(kind+"StartBtn").textContent = "Retake Assessment";
     }
   };
 
   window.submitQuiz = function(kind){
-    const questions = writtenQuestions;
-    const box = document.getElementById(kind+"Quiz");
+    const box = $(kind+"Quiz");
     let correct = 0;
-    questions.forEach((item, qi)=>{
+    writtenQuestions.forEach((item, qi)=>{
       const picked = box.querySelector('input[name="'+kind+'_q'+qi+'"]:checked');
       if(picked && parseInt(picked.value,10) === item.a) correct++;
     });
-    const score = Math.round((correct/questions.length)*100);
-    state[kind].score = score;
+    DFAuth.logQuiz("quiz_final", correct, writtenQuestions.length, {page:"certification"});
     box.classList.add("hidden");
     box.innerHTML = "";
-    document.getElementById(kind+"StartBtn").textContent = "Retake Assessment";
-    save();
+    $(kind+"StartBtn").textContent = "Retake Assessment";
+    render();
+    check();
   };
-
-  function scoreLabel(kind){
-    const s = state[kind].score;
-    const el = document.getElementById(kind+"ScoreDisplay");
-    const st = document.getElementById(kind+"Status");
-    if(s === null || s === undefined){
-      el.textContent = "—";
-      st.textContent = "Not attempted";
-    } else {
-      el.textContent = s + "%";
-      st.textContent = s >= PASS ? "Passed (80% required)" : "Not yet passed — 80% required, retake anytime";
-      st.style.color = s >= PASS ? "#1a8f5a" : "#c0392b";
-    }
-  }
 
   function render(){
     renderModules();
-    scoreLabel("written");
+    const p = progress(), q = p.quizzes.quiz_final, pass = passMark(), cert = DFAuth.getCertificate();
+    const score = q ? q.score : null;
+    const modsDone = moduleDefs.filter(m=>p.modules[m.id]).length, total = moduleDefs.length;
+    $("statModules").textContent = modsDone+"/"+total;
+    $("statModulesBar").style.width = Math.round(modsDone/total*100)+"%";
+    ["statScore","finalScoreBig"].forEach(id=>{ $(id).textContent = score===null ? "—" : score+"%"; });
+    ["statScoreBar","finalScoreBar"].forEach(id=>{ $(id).style.width = (score||0)+"%"; });
+    $("writtenScoreDisplay").textContent = score===null ? "—" : score+"%";
+    const st = $("writtenStatus");
+    st.textContent = score===null ? "Not attempted" : score>=pass ? "Passed ("+pass+"% required)" : "Not yet passed: "+pass+"% required, retake anytime";
+    st.style.color = score===null ? "" : score>=pass ? "#1a8f5a" : "#c0392b";
 
-    const modIds = moduleDefs.map(m=>m.id);
-    const modsDone = modIds.filter(id=>state.modules[id]).length;
-    document.getElementById("statModules").textContent = modsDone+"/"+modIds.length;
-    document.getElementById("statModulesBar").style.width = Math.round((modsDone/modIds.length)*100)+"%";
+    const badge = $("statBadge");
+    if(cert){ badge.textContent = "Certified"; badge.className = "cert-badge-pill cert-badge-earned"; }
+    else if(modsDone>0 || score!==null){ badge.textContent = "In Progress"; badge.className = "cert-badge-pill cert-badge-progress"; }
+    else { badge.textContent = "Not Started"; badge.className = "cert-badge-pill cert-badge-pending"; }
 
-    const writtenScore = state.written.score;
-    const finalScore = (writtenScore !== null && writtenScore !== undefined) ? writtenScore : null;
-    document.getElementById("statScore").textContent = finalScore===null ? "—" : finalScore+"%";
-    document.getElementById("statScoreBar").style.width = (finalScore||0)+"%";
-    document.getElementById("finalScoreBig").textContent = finalScore===null ? "—" : finalScore+"%";
-    document.getElementById("finalScoreBar").style.width = (finalScore||0)+"%";
-
-    const allModulesDone = modsDone === modIds.length;
-    const writtenPassed = writtenScore !== null && writtenScore !== undefined && writtenScore >= PASS;
-    const certified = allModulesDone && writtenPassed;
-
-    const badge = document.getElementById("statBadge");
-    if(certified){
-      badge.textContent = "Certified";
-      badge.className = "cert-badge-pill cert-badge-earned";
-    } else if(modsDone>0 || writtenScore!=null){
-      badge.textContent = "In Progress";
-      badge.className = "cert-badge-pill cert-badge-progress";
+    const note = $("finalRequirementNote");
+    if(cert){
+      note.textContent = "Congratulations! You have graduated. Your certificate is below.";
+      if(!mounted){ mounted = true; DFCertificate.mount($("certificateArea"), cert); }
     } else {
-      badge.textContent = "Not Started";
-      badge.className = "cert-badge-pill cert-badge-pending";
+      const need = [];
+      if(modsDone<total) need.push("complete Modules 01 to 04 ("+modsDone+" of "+total+" done)");
+      if(score===null || score<pass) need.push("score "+pass+"% or higher on the assessment");
+      if(pctOf("m5")<100) need.push("read this page to 100% (now "+pctOf("m5")+"%)");
+      note.textContent = need.length ? "To earn your Graduation Certificate: "+need.join("; ")+"." : "Finishing up your certificate…";
     }
-
-    renderCertificate(certified, finalScore);
   }
 
-  function renderCertificate(certified, finalScore){
-    const area = document.getElementById("certificateArea");
-    if(!certified){
-      area.innerHTML = "";
-      return;
-    }
-    const today = new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
-    area.innerHTML =
-      '<div class="cert-btn-row">'+
-        '<input type="text" class="cert-name-input" id="certNameInput" placeholder="Enter your full name" value="'+(state.name||"")+'">'+
-      '</div>'+
-      '<div class="cert-certificate" id="certificateBlock">'+
-        '<div class="cert-crest">🏅</div>'+
-        '<p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin:0;">Dealerfocus Training Academy</p>'+
-        '<h2>Certificate of CSR Completion</h2>'+
-        '<p style="font-size:14px;opacity:.75;margin:0;">This certifies that</p>'+
-        '<p class="cert-name" id="certNameDisplay">'+(state.name || "Your Name Here")+'</p>'+
-        '<p style="font-size:14px;opacity:.8;max-width:50ch;margin:0 auto;">has successfully completed all required CSR Fundamentals modules and passed the Final Certification with a score of '+finalScore+'%.</p>'+
-        '<p class="cert-meta">Issued '+today+' &middot; Final Written Assessment: '+state.written.score+'%</p>'+
-      '</div>'+
-      '<div class="cert-btn-row">'+
-        '<button type="button" class="cert-toggle-btn" onclick="window.print()">Print / Save Certificate</button>'+
-        '<button type="button" class="cert-btn-secondary" onclick="resetCert()">Reset Progress</button>'+
-      '</div>';
-
-    document.getElementById("certNameInput").addEventListener("input", (e)=>{
-      state.name = e.target.value;
-      document.getElementById("certNameDisplay").textContent = state.name || "Your Name Here";
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    });
+  function check(){
+    if(DFAuth.getCertificate()) return Promise.resolve();
+    return DFAuth.checkCertificate().then(render);
   }
 
-  window.resetCert = function(){
-    if(!confirm("Reset all certification progress? This cannot be undone.")) return;
-    state = {modules:{m1:false,m2:false,m3:false,m4:false}, written:{score:null}, name:""};
-    save();
-  };
-
-  render();
+  DFAuth.onReady(function(){
+    render();
+    const me = DFAuth.current();
+    if(me && me.role==="user"){
+      setInterval(function(){ if(document.visibilityState==="visible" && !DFAuth.getCertificate()){ check(); } }, 15000);
+    }
+  });
 })();
-</script>
-<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>
+</script></body>
 </html>

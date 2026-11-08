@@ -90,6 +90,13 @@ the rate is 100% and its assessment score is at or above the Admin pass mark. Mo
 alone completes them. Assessments on Google Forms (Modules 1, 2) reach the site through **Log score** or an admin's Set score.
 Existing databases need the `module_completion` table from `schema.sql`.
 
+## Graduation Certificate (`certificate.js`)
+
+When all five required modules are Completed the server issues one certificate per user (`certificates` table): number, name
+and date are fixed at that moment. It appears on My Progress and the Certification page and can be downloaded as PNG or PDF.
+The trainer name is set in `certificate.js`. An admin's **Reset progress** removes it. Existing databases need the
+`certificates` table from `schema.sql`.
+
 ## Notes
 
 - Module 02 and other pages still reference `assets/*.mp4` clips that are not in the repo; add them to `assets/` to enable them.

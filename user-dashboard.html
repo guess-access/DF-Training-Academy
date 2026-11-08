@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Progress — Dealerfocus Training Academy</title>
-<link rel="stylesheet" href="style.css"><script src="auth.js"></script>
+<link rel="stylesheet" href="style.css"><script src="auth.js"></script><script src="certificate.js"></script>
 <style>
 .wrap{max-width:1000px;margin:0 auto;padding:32px 20px 60px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0}
@@ -37,6 +37,7 @@ th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{backg
 <div class="stat"><div class="l">Best score</div><div class="v" id="sBest">—</div><div class="bar"><div id="sBestBar" style="width:0%"></div></div></div>
 <div class="stat"><div class="l">Quiz attempts</div><div class="v" id="sAtt">—</div><div style="font-size:13px;color:#667085" id="sCert">—</div></div>
 </div>
+<div id="certBox" style="display:none;margin:24px 0"><h2 style="margin:0 0 6px">Your Graduation Certificate</h2><p style="margin:0 0 14px;color:#667085;font-size:14px">Congratulations! You have completed all required modules.</p><div id="certMount"></div></div>
 <h2>Step 1: About Us</h2><div id="aboutRow"></div>
 <section class="mods-panel"><div class="mp-head"><span class="mp-title">Modules</span><span class="mp-sum" id="modsSum"></span></div>
 <p class="mp-rule">A module is marked <b>Completed</b> automatically when Completion Rate reaches 100% and the Assessment Score meets the pass mark.</p>
@@ -51,6 +52,7 @@ th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{backg
 DFAuth.onReady(function(){
   var me=DFAuth.current(); if(!me){location.href='login.html?next=user-dashboard.html';return;}
   document.getElementById('hello').textContent='My Progress — '+me.name;
+  var earned=DFAuth.getCertificate(); if(earned){document.getElementById('certBox').style.display='block';DFCertificate.mount(document.getElementById('certMount'),earned);}
   var p=DFAuth.getProgress(), at=DFAuth.getAttempts(), us=DFAuth.getUsage(), set=DFAuth.getSettings();
   var allMods=set.modules||DFAuth.MODULES, mods=allMods.filter(function(m){return !m.optional;});
   var ab=DFAuth.getAbout()||{};

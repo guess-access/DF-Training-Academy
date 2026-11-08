@@ -86,6 +86,15 @@ CREATE TABLE IF NOT EXISTS module_completion (
   PRIMARY KEY (user_id, module_id)
 );
 
+-- Graduation certificates: one per user, issued once all required modules are Completed.
+CREATE TABLE IF NOT EXISTS certificates (
+  user_id   TEXT PRIMARY KEY,
+  cert_no   TEXT NOT NULL UNIQUE,
+  name      TEXT NOT NULL,
+  score     INTEGER NOT NULL,
+  issued_at TEXT NOT NULL
+);
+
 -- About Us gate: server-side record of the team video being played in order at normal speed.
 -- coverage = one character per second of video ('1' = that second was played in order).
 CREATE TABLE IF NOT EXISTS about_progress (

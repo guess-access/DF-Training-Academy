@@ -9,11 +9,13 @@ Training hub with 2 access roles: Admin (full results, progress and usage view +
 - Admin dashboard: admin-dashboard.html (view/edit all users, set scores, reset progress, export CSV).
 - User dashboard: user-dashboard.html (unique per-user log).
 
-## Deploy (Netlify from GitHub)
+## Deploy (Cloudflare Pages from GitHub)
 
-1. Netlify: Add new site > Import an existing project > GitHub > this repo.
-2. Branch: App. Build command: none. Publish directory: . (see netlify.toml).
-3. Deploy, then test /login.html as admin and as a new user.
+1. Cloudflare dashboard: Workers & Pages > Create > Pages > Connect to Git > select guess-access/DF-Training-Academy.
+2. Production branch: App. Framework preset: None. Build command: (leave empty). Build output directory: / (repo root).
+3. Save and Deploy. Every push to App redeploys automatically; then test /login.html as admin and as a new user.
+
+(netlify.toml is kept only for reference; Cloudflare Pages ignores it.)
 
 ## Production backend (optional)
 

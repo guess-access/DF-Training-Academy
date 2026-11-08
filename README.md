@@ -72,8 +72,9 @@ Staff only; admins are exempt. A "page complete" hint pill shows progress at the
 - Covers Module 1 (Next on every lesson + sidebar jumps + Assessment link), Module 2 (Next on both tabs + tabs + Assessment link) and Module 4 / CSR fundamentals
   (Next/Finish + section menu). Add `<script src="pace.js"></script>` after `bridge.js` to cover another interactive page
   (it needs an adapter in `pace.js` for that page's navigation).
-- Module 3 embeds an outside site (onizoa.github.io), Module 5 is an assessment, and Module 6 embeds `training-1.html`,
-  which is not in the repo, so they have no Next button to pace here.
+- Modules 3, 5 and 6 have one "Next Module" link at the bottom of the page (`data-df-next`; Module 6's goes to My Progress).
+  It is paced by that page's own text only: Module 3's training is an outside site (onizoa.github.io) and Module 6 embeds
+  `training-1.html`, which is not in the repo, so activity inside those cannot be measured.
 - Finished pages are remembered per user in the browser (`localStorage`); this is a pacing aid in the page, not a server
   check like the About Us video.
 

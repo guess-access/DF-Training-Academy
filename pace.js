@@ -7,7 +7,7 @@
  * Finished pages are remembered in this browser (localStorage). This is a pacing aid in the page; the About Us video
  * check is the part enforced on the server.
  *
- * Works for: Module 1 (Next buttons + sidebar + Assessment), Module 2 (Next buttons + tabs + Assessment), Module 4 CSR (Next + section menu).
+ * Works for: Module 1 (Next buttons + sidebar + Assessment), Module 2 (Next buttons + tabs + Assessment), Module 4 CSR (Next + section menu), Modules 3, 5, 6 (Next Module link).
  * Loaded AFTER bridge.js so its wrappers sit outside bridge's tracking hooks (a blocked click records nothing).
  */
 (function () {
@@ -211,11 +211,30 @@
     };
   }
 
+  function adapterSingle() { // Modules 3, 5, 6: one page with a "Next Module" link marked data-df-next
+    var links = [].slice.call(document.querySelectorAll("[data-df-next]"));
+    var main = document.querySelector("main");
+    if (!links.length || !main) return null;
+    var page = { id: "page", el: main };
+    links.forEach(function (n) {
+      n.addEventListener("click", function (e) {
+        if (!isDone("page")) { e.preventDefault(); e.stopPropagation(); blocked("page"); }
+      }, true);
+    });
+    return {
+      current: function () { return page; },
+      el: function (p) { return p.el; },
+      paint: function (cur, ok) {
+        links.forEach(function (b) { b.classList.toggle("df-locked", !ok); b.setAttribute("aria-disabled", ok ? "false" : "true"); });
+      }
+    };
+  }
+
   function start() {
     var me = DFAuth.current();
     if (!me || me.role === "admin") return;   // staff only
     uid = me.id; loadDone();
-    adapter = adapterM1() || adapterM2() || adapterCSR();
+    adapter = adapterM1() || adapterM2() || adapterCSR() || adapterSingle();
     if (!adapter) return;
     window.addEventListener("scroll", evaluate, true);
     window.addEventListener("resize", evaluate);

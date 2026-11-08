@@ -49,6 +49,7 @@ footer{text-align:center;color:var(--muted);padding:20px}
 .floating-reminder strong{color:#9a5b00}
 @keyframes float-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 
+.page>.actions{margin-bottom:190px}
 </style>
 </head>
 <body>
@@ -107,6 +108,7 @@ footer{text-align:center;color:var(--muted);padding:20px}
           <strong>LA</strong> - Louisiana
         </p>
       </div>
+      <div class="actions"><span></span><button class="btn" onclick="showPage('timezones',document.querySelectorAll('.nav-btn')[2])">Next: Time Zones →</button></div>
     </section>
 
     <section id="timezones" class="page hidden">
@@ -171,6 +173,7 @@ footer{text-align:center;color:var(--muted);padding:20px}
         </div>
         <p id="tzFeedback" style="font-weight:700;margin-top:15px"></p>
       </div>
+      <div class="actions"><span></span><a class="btn" style="text-decoration:none" href="https://forms.gle/do5i1BvNqkeAegpW6" target="_blank" rel="noopener">Next: Assessment →</a></div>
     </section>
 
     <section id="assessment" class="page hidden">

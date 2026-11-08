@@ -7,7 +7,7 @@
  * Finished pages are remembered in this browser (localStorage). This is a pacing aid in the page; the About Us video
  * check is the part enforced on the server.
  *
- * Works for: Module 1 (Start Training + sidebar), Module 2 (tabs), Module 4 CSR (Next + section menu).
+ * Works for: Module 1 (Next buttons + sidebar + Assessment), Module 2 (Next buttons + tabs + Assessment), Module 4 CSR (Next + section menu).
  * Loaded AFTER bridge.js so its wrappers sit outside bridge's tracking hooks (a blocked click records nothing).
  */
 (function () {
@@ -121,7 +121,7 @@
   /* ---- adapters ---- */
   function adapterM1() { // Module 1 interactive: sections .page, sidebar .nav-btn, "Start Training" in .actions
     if (typeof window.showPage !== "function" || !document.querySelector(".sidebar .nav-btn")) return null;
-    var pages = [].slice.call(document.querySelectorAll("main .page")).map(function (p) { return { id: p.id, el: p }; });
+    var pages = [].slice.call(document.querySelectorAll("main .page")).filter(function (p) { return p.id !== "assessment"; }).map(function (p) { return { id: p.id, el: p }; });
     var navs = [].slice.call(document.querySelectorAll(".sidebar .nav-btn"));
     function curIdx() { for (var i = 0; i < pages.length; i++) if (!pages[i].el.classList.contains("hidden")) return i; return 0; }
     var orig = window.showPage;
@@ -132,8 +132,8 @@
       return orig.apply(this, arguments);
     };
     // the Assessment link is an <a> that opens a form: treat it as "after the last lesson"
-    navs.forEach(function (n) {
-      if (n.tagName === "A") n.addEventListener("click", function (e) {
+    [].slice.call(document.querySelectorAll(".sidebar a.nav-btn, .actions a.btn")).forEach(function (n) {
+      n.addEventListener("click", function (e) {
         var from = curIdx();
         if (!allowForward(pages, from, pages.length)) { e.preventDefault(); e.stopPropagation(); blocked(pages[from].id); }
       }, true);
@@ -157,6 +157,13 @@
     if (typeof window.showTab !== "function" || !document.querySelector(".tab-btn")) return null;
     var pages = [].slice.call(document.querySelectorAll(".tab-content")).map(function (p) { return { id: p.id, el: p }; });
     var btns = [].slice.call(document.querySelectorAll(".tab-btn"));
+    var links = [].slice.call(document.querySelectorAll("a.assessment-btn, .tab-next a"));
+    links.forEach(function (n) {
+      n.addEventListener("click", function (e) {
+        var from = curIdx();
+        if (!allowForward(pages, from, pages.length)) { e.preventDefault(); e.stopPropagation(); blocked(pages[from].id); }
+      }, true);
+    });
     function curIdx() { for (var i = 0; i < pages.length; i++) if (pages[i].el.classList.contains("active")) return i; return 0; }
     var orig = window.showTab;
     window.showTab = function (name) {
@@ -168,12 +175,12 @@
     return {
       current: function () { return pages[curIdx()]; },
       el: function (p) { return p.el; },
-      paint: function () {
+      paint: function (cur, ok) {
         var from = curIdx();
-        btns.forEach(function (b, i) {
-          var lock = i > from && !allowForward(pages, from, i);
-          b.classList.toggle("df-locked", lock); b.setAttribute("aria-disabled", lock ? "true" : "false");
-        });
+        function set(b, lock) { b.classList.toggle("df-locked", lock); b.setAttribute("aria-disabled", lock ? "true" : "false"); }
+        btns.forEach(function (b, i) { set(b, i > from && !allowForward(pages, from, i)); });
+        links.forEach(function (b) { set(b, !allowForward(pages, from, pages.length)); });
+        [].slice.call(cur.el.querySelectorAll(".tab-next button")).forEach(function (b) { set(b, !ok); });
       }
     };
   }

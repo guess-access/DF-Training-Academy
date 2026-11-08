@@ -69,7 +69,7 @@ smaller of (a) how far down the page the learner has scrolled and (b) time on th
 (about 220 words/min, tab visible), so scrolling to the bottom in a second does not unlock it. Backward moves are free.
 Staff only; admins are exempt. A "page complete" hint pill shows progress at the bottom-left.
 
-- Covers Module 1 (Start Training + sidebar jumps + Assessment link), Module 2 (tabs) and Module 4 / CSR fundamentals
+- Covers Module 1 (Next on every lesson + sidebar jumps + Assessment link), Module 2 (Next on both tabs + tabs + Assessment link) and Module 4 / CSR fundamentals
   (Next/Finish + section menu). Add `<script src="pace.js"></script>` after `bridge.js` to cover another interactive page
   (it needs an adapter in `pace.js` for that page's navigation).
 - Module 3 embeds an outside site (onizoa.github.io), Module 5 is an assessment, and Module 6 embeds `training-1.html`,

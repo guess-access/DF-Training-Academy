@@ -87,7 +87,14 @@ function aboutSummary(row, cfg) {
   const dur = row && row.duration ? row.duration : 0;
   const n = Math.ceil(dur);
   const covered = row && row.coverage ? countOnes(row.coverage) : 0;
+  // where the viewer left off, so the player can resume (a few seconds earlier so nothing is missed)
+  let resumePos = 0;
+  if (row && !row.completed_at && !row.ended && row.last_pos > 8 && dur && row.last_pos < dur - 3) {
+    // rewind a little only if they left mid-playback; if they had paused, resume exactly there
+    resumePos = Math.max(0, Math.floor(row.last_pos) - (row.last_playing ? 3 : 0));
+  }
   return {
+    resumePos,
     completed: !!(row && row.completed_at),
     completedAt: row && row.completed_at ? row.completed_at : null,
     videoPct: n ? Math.min(100, Math.floor((covered / n) * 100)) : 0,
@@ -149,7 +156,7 @@ async function buildUserData(env, userId) {
     if (r.edited_by_admin) progress.quizzes[r.quiz_id].editedByAdmin = true;
   });
   const cfgAbout = await getAboutCfg(env);
-  const aboutRow = await env.DB.prepare("SELECT coverage, page_sec, duration, violations, completed_at FROM about_progress WHERE user_id = ?").bind(userId).first();
+  const aboutRow = await env.DB.prepare("SELECT coverage, page_sec, duration, violations, completed_at, last_pos, last_playing, ended FROM about_progress WHERE user_id = ?").bind(userId).first();
   const usage = {
     views: views.results.reverse(),
     logins: logins.results.reverse(),
@@ -372,7 +379,18 @@ async function aboutBeat(req, env, me) {
 
   const lastBeat = row && row.last_beat ? Date.parse(row.last_beat) : null;
   const wall = lastBeat ? (nowMs - lastBeat) / 1000 : 0;
-  if (lastBeat && wall < 1.5) return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: null }, cfg) }); // ignore bursts
+  if (lastBeat && wall < 1.5) {
+    // a burst (e.g. the pause/leave beat right after a heartbeat): earns no credit, but remember where they are
+    // and whether they were playing, so "where I left off" is accurate. last_beat stays put, so timing is unaffected.
+    // Only accept it if it is not a jump ahead of normal-speed playback (otherwise a forged quick beat could
+    // move the baseline forward and the next heartbeat would credit the skipped part).
+    const playingNow = b.playing === true ? 1 : 0;
+    const forwardOk = row.last_pos === null || row.last_pos === undefined || pos - row.last_pos <= wall * 1.15 + 0.75;
+    const keepPos = forwardOk ? pos : row.last_pos;
+    const keepPlaying = forwardOk ? playingNow : row.last_playing;
+    if (forwardOk) await env.DB.prepare("UPDATE about_progress SET last_pos = ?, last_playing = ? WHERE user_id = ?").bind(pos, playingNow, me.id).run();
+    return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: null, last_pos: keepPos, last_playing: keepPlaying, ended }, cfg) });
+  }
 
   if (lastBeat && wall <= BEAT_MAX_WALL && b.visible === true) pageSec += wall;
 
@@ -399,7 +417,7 @@ async function aboutBeat(req, env, me) {
     "last_playing=excluded.last_playing, duration=excluded.duration, ended=excluded.ended, violations=excluded.violations, completed_at=excluded.completed_at"
   ).bind(me.id, cov, pageSec, pos, new Date(nowMs).toISOString(), b.playing === true ? 1 : 0, dur, ended, viol, completedAt).run();
   if (completedAt) await touch(env, me.id);
-  return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: completedAt }, cfg) });
+  return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: completedAt, last_pos: pos, last_playing: b.playing === true ? 1 : 0, ended }, cfg) });
 }
 
 /* ---------- admin ---------- */

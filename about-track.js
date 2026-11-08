@@ -36,6 +36,53 @@
     var videoPct = about.videoPct || 0;
     var beatAt = 0;
     var ready = false, failed = false, lastGood = 0;
+    var resumePos = about.resumePos || 0, resumed = false;
+
+    /* pick the video up where this person left off (a few seconds earlier), instead of starting over */
+    // The video host does not support byte-range requests and browsers stop buffering a paused video, so a
+    // returning viewer's video is downloaded once into memory (a blob), where jumping to the saved spot is instant.
+    var resumeStarted = 0;
+    function giveUp(why) {
+      resumed = true;
+      playBtn.disabled = false; playBtn.textContent = "Play";
+      msg(why + " The video will start from the beginning; your earlier progress is kept.", "warn");
+    }
+    function resume() {
+      if (resumeStarted || resumed || completed || !resumePos || !v.duration || resumePos >= v.duration - 3) return;
+      resumeStarted = Date.now();
+      playBtn.disabled = true; playBtn.textContent = "Loading…";
+      msg("Loading your saved spot (" + fmt(resumePos) + ")…", "");
+      var srcEl = v.querySelector("source");
+      var url = srcEl ? srcEl.src : v.currentSrc;
+      var timer = setTimeout(function () { if (!resumed) giveUp("Loading is taking too long."); }, 120000);
+      fetch(url, { credentials: "same-origin" }).then(function (r) {
+        if (!r.ok || !r.body) throw new Error("bad response");
+        var total = Number(r.headers.get("content-length")) || 0, got = 0, chunks = [], reader = r.body.getReader();
+        return (function pump() {
+          return reader.read().then(function (x) {
+            if (x.done) return new Blob(chunks, { type: "video/mp4" });
+            chunks.push(x.value); got += x.value.length;
+            msg("Loading your saved spot (" + fmt(resumePos) + ")… " + (total ? Math.round(got / total * 100) + "%" : Math.round(got / 1048576) + " MB"), "");
+            return pump();
+          });
+        })();
+      }).then(function (blob) {
+        if (resumed) return;
+        var obj = URL.createObjectURL(blob);
+        v.addEventListener("loadedmetadata", function onMeta() {
+          v.removeEventListener("loadedmetadata", onMeta);
+          clearTimeout(timer);
+          resumed = true;
+          lastGood = resumePos;    // set first so the anti-skip guard accepts this one programmatic jump
+          v.currentTime = resumePos;
+          playBtn.disabled = false; playBtn.textContent = "Resume";
+          msg("Welcome back. Resuming from " + fmt(resumePos) + " where you left off.", "");
+          render();
+        });
+        v.src = obj;
+        v.load();
+      }).catch(function () { clearTimeout(timer); if (!resumed) giveUp("Could not load your saved spot."); });
+    }
 
     function msg(t, kind) { msgEl.textContent = t || ""; msgEl.className = "at-msg" + (kind ? " " + kind : ""); }
 
@@ -79,6 +126,8 @@
     var lastSent = 0;
     function beat(keepalive) {
       if (completed || !ready || failed) return;
+      // while still loading the saved spot the player sits at 0:00; reporting that would overwrite the saved spot
+      if (resumePos && !resumed) return;
       lastSent = Date.now();
       DFAuth.aboutBeat({
         pos: v.currentTime,
@@ -111,7 +160,7 @@
     v.addEventListener("play", function () { playBtn.textContent = "Pause"; beat(); });
     v.addEventListener("pause", function () { if (!v.ended) playBtn.textContent = "Play"; beat(); });
     v.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-    v.addEventListener("loadedmetadata", function () { ready = true; failed = false; render(); beat(); });
+    v.addEventListener("loadedmetadata", function () { ready = true; failed = false; resume(); render(); beat(); });
     function unavailable() {
       failed = true; ready = false; playBtn.disabled = true;
       wrap.classList.add("ap-missing");
@@ -145,7 +194,7 @@
     if (completed) done();
     else if (gateOn) msg("Watch the whole video, then keep this page open until the time bar is full.", "");
     render();
-    if (v.readyState >= 1) { ready = true; render(); beat(); }
+    if (v.readyState >= 1) { ready = true; resume(); render(); beat(); }
     if (v.error) unavailable();
   }
 })();

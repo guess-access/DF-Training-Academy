@@ -31,6 +31,12 @@ input,select{padding:8px 10px;border:1px solid #cfd7e5;border-radius:8px;font-si
 <label style="font-size:13px">Pass % <input id="passIn" type="number" min="1" max="100" style="width:70px"> <button class="btn sec" onclick="savePass()">Save</button></label>
 <button class="btn sec" onclick="DFAuth.logout()">Logout</button>
 </div>
+<div class="toolbar" style="align-items:center;background:#f4f6fb;border-radius:12px;padding:10px 14px">
+<label style="font-size:13px"><input type="checkbox" id="gateOn"> <b>About Us gate</b>: staff must finish About Us (video + time on page) before the Modules open and progress is recorded</label>
+<label style="font-size:13px">Min. time on page <input id="minIn" type="number" min="1" max="60" style="width:64px"> minutes</label>
+<button class="btn sec" onclick="saveGate()">Save gate settings</button>
+<span id="gateMsg" style="font-size:13px"></span>
+</div>
 <div class="detail" id="addBox" style="display:none;margin:0 0 14px">
 <h3 style="margin-top:0">Add a user</h3>
 <p style="font-size:13px;color:#667085;margin:0 0 8px">Only admins can create or remove accounts. Give the person their email and this temporary password; you can reset it later from their row.</p>
@@ -44,15 +50,18 @@ input,select{padding:8px 10px;border:1px solid #cfd7e5;border-radius:8px;font-si
 </div>
 <p id="nuMsg" style="font-size:13px;margin:8px 0 0"></p>
 </div>
-<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Modules</th><th>Best</th><th>Attempts</th><th>Logins</th><th>Last active</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table>
+<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>About Us</th><th>Modules</th><th>Best</th><th>Attempts</th><th>Logins</th><th>Last active</th><th>Status</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table>
 <div class="detail" id="detail" style="display:none"></div>
 </main>
 <footer class="site-footer sec-footer"><span>© 2026 Dealerfocus Training Academy | All rights reserved.</span></footer>
 <script>
 var DATA=[];
-document.addEventListener('df:ready',function(){
+DFAuth.onReady(function(){
   var me=DFAuth.current(); if(!me||me.role!=='admin'){location.href='login.html?next=admin-dashboard.html';return;}
-  document.getElementById('passIn').value=DFAuth.getSettings().passPct;
+  var st=DFAuth.getSettings();
+  document.getElementById('passIn').value=st.passPct;
+  document.getElementById('gateOn').checked=!!st.aboutGate;
+  document.getElementById('minIn').value=Math.round(st.aboutMinSec/60);
   refresh();
 });
 async function refresh(){var r=await DFAuth.admin.list();if(r.error){alert(r.error);return;}DATA=r;render();kpis();}
@@ -61,14 +70,16 @@ function render(){
   var q=(document.getElementById('q').value||'').toLowerCase(), f=document.getElementById('f').value;
   var rows=DATA.filter(function(u){if(f==='admin'&&u.role!=='admin')return false;if(f==='user'&&u.role!=='user')return false;if(f==='cert'&&!u.certified)return false;if(q&&(u.name+' '+u.email).toLowerCase().indexOf(q)<0)return false;return true;});
   document.getElementById('rows').innerHTML=rows.map(function(u){
-    return '<tr><td><b>'+DFAuth.esc(u.name)+'</b></td><td>'+DFAuth.esc(u.email)+'</td><td><span class="badge '+(u.role==='admin'?'a':'u')+'">'+u.role+'</span></td><td>'+u.modulesDone+'</td><td>'+(u.best===null?'—':u.best+'%')+'</td><td>'+u.attempts+'</td><td>'+u.logins+'</td><td>'+(u.lastActive?new Date(u.lastActive).toLocaleString():'—')+'</td><td><span class="badge '+(u.certified?'c':'nc')+'">'+(u.certified?'Certified':'In progress')+'</span></td><td><button class="btn" onclick="openUser(\''+u.id+'\')">View / edit</button></td></tr>';
-  }).join('')||'<tr><td colspan="10">No users.</td></tr>';
+    return '<tr><td><b>'+DFAuth.esc(u.name)+'</b></td><td>'+DFAuth.esc(u.email)+'</td><td><span class="badge '+(u.role==='admin'?'a':'u')+'">'+u.role+'</span></td><td><span class="badge '+(u.aboutDone?'c':'nc')+'">'+(u.aboutDone?'Complete':'Pending')+'</span></td><td>'+u.modulesDone+'</td><td>'+(u.best===null?'—':u.best+'%')+'</td><td>'+u.attempts+'</td><td>'+u.logins+'</td><td>'+(u.lastActive?new Date(u.lastActive).toLocaleString():'—')+'</td><td><span class="badge '+(u.certified?'c':'nc')+'">'+(u.certified?'Certified':'In progress')+'</span></td><td><button class="btn" onclick="openUser(\''+u.id+'\')">View / edit</button></td></tr>';
+  }).join('')||'<tr><td colspan="11">No users.</td></tr>';
 }
 async function openUser(id){
   var r=await DFAuth.admin.get(id); if(r.error){alert(r.error);return;}
   var mods=(DFAuth.getSettings().modules||DFAuth.MODULES);
   var h='<h2>'+DFAuth.esc(r.user.name)+' <small style="color:#667085">'+DFAuth.esc(r.user.email)+' • '+r.user.role+'</small></h2>';
   h+='<p>Certified: <b>'+(r.certified?'Yes 🏅':'No')+'</b></p>';
+  var ab=r.about||{};
+  h+='<p>About Us: <b>'+(ab.completed?'Complete ✓ ('+new Date(ab.completedAt).toLocaleString()+')':'Not complete')+'</b> • Video watched in order: '+(ab.videoPct||0)+'% • Time on page: '+Math.floor((ab.pageSec||0)/60)+'m '+((ab.pageSec||0)%60)+'s of '+Math.round((ab.minSec||300)/60)+' min • Skip/fast-forward attempts: '+(ab.skips||0)+' <button class="btn sec" onclick="resetAbout(\''+id+'\')">Reset About Us</button></p>';
   h+='<h3>Progress (edit)</h3>'+mods.map(function(m){var d=r.progress.modules&&r.progress.modules[m.id];var q=r.progress.quizzes&&r.progress.quizzes[m.quiz];return '<div style="display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap"><b style="min-width:260px">'+DFAuth.esc(m.title)+'</b><span>'+(d?'Done ✓':'Not done')+'</span><span>Score: '+(q?q.score+'%':'—')+'</span><input id="sc_'+m.quiz+'" type="number" min="0" max="100" placeholder="set %" style="width:80px"><button class="btn sec" onclick="setScore(\''+id+'\',\''+m.quiz+'\')">Set score</button></div>';}).join('');
   h+='<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" onclick="toggleRole(\''+id+'\',\''+r.user.role+'\')">Make '+(r.user.role==='admin'?'user':'admin')+'</button>'+(id===DFAuth.current().id?'':'<button class="btn sec" onclick="pwU(\''+id+'\')">Reset password</button>')+'<button class="btn sec" onclick="resetU(\''+id+'\')">Reset progress</button><button class="btn danger" onclick="delU(\''+id+'\')">Delete user</button><button class="btn sec" onclick="document.getElementById(\'detail\').style.display=\'none\'">Close</button></div>';
   h+='<h3>Attempts log</h3><table><thead><tr><th>Date</th><th>Quiz</th><th>Score</th><th>Status</th><th>Source</th></tr></thead><tbody>'+(r.attempts.slice().reverse().map(function(a){return '<tr><td>'+new Date(a.at).toLocaleString()+'</td><td>'+DFAuth.esc(a.quiz)+'</td><td>'+a.score+'%</td><td>'+(a.passed?'Passed':'Not passed')+'</td><td>'+DFAuth.esc(a.source||'quiz')+'</td></tr>';}).join('')||'<tr><td colspan="5">None</td></tr>')+'</tbody></table>';
@@ -90,8 +101,18 @@ async function addUser(){
   await refresh();
 }
 async function pwU(id){var p=prompt('New password for this user (min 8 characters). They will be signed out everywhere:');if(p===null)return;var r=await DFAuth.admin.setPassword(id,p);if(r.error)alert(r.error);else alert('Password updated. Share it with the user privately.');}
+async function saveGate(){
+  var on=document.getElementById('gateOn').checked, mins=Number(document.getElementById('minIn').value), m=document.getElementById('gateMsg');
+  m.style.color='#a61e2a';m.textContent='';
+  if(!(mins>=1&&mins<=60)){m.textContent='Minutes must be 1-60.';return;}
+  if(on&&!DFAuth.getSettings().aboutGate&&!confirm('Staff will be locked out of the Modules until they finish the About Us video and the minimum time on the page.\n\nBefore turning this on, make sure the video file (assets/what-we-do-video.mp4) is in the site and plays on the About Us page.\n\nTurn the gate on?'))return;
+  var r=await DFAuth.admin.saveSettings({aboutGate:on,aboutMinSec:Math.round(mins*60)});
+  if(r.error){m.textContent=r.error;return;}
+  m.style.color='#11663d';m.textContent='Saved. Gate is '+(on?'ON':'OFF')+'.';
+}
+async function resetAbout(id){if(!confirm('Reset this user\'s About Us progress? They will have to watch the video again.'))return;var r=await DFAuth.admin.aboutReset(id);if(r.error)alert(r.error);await refresh();openUser(id);}
 async function savePass(){var v=Number(document.getElementById('passIn').value);if(!(v>=1&&v<=100)){alert('Enter 1-100');return;}var r=await DFAuth.admin.saveSettings({passPct:v});if(r.error)alert(r.error);await refresh();}
-function exportCSV(){var csv='name,email,role,modules,best,attempts,logins,lastActive,certified\n'+DATA.map(function(u){return [u.name,u.email,u.role,u.modulesDone,u.best==null?'':u.best,u.attempts,u.logins,u.lastActive||'',u.certified?'yes':'no'].map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n');var b=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='dealerfocus-users.csv';a.click();}
+function exportCSV(){var csv='name,email,role,aboutUs,modules,best,attempts,logins,lastActive,certified\n'+DATA.map(function(u){return [u.name,u.email,u.role,u.aboutDone?'complete':'pending',u.modulesDone,u.best==null?'':u.best,u.attempts,u.logins,u.lastActive||'',u.certified?'yes':'no'].map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(',');}).join('\n');var b=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='dealerfocus-users.csv';a.click();}
 </script>
 </body>
 </html>

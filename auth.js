@@ -18,6 +18,7 @@
   ];
 
   /* ---- in-memory copy of the signed-in user's data (source of truth is the server) ---- */
+  var isReady = false;
   var S = emptyState();
   function emptyState() {
     return {
@@ -25,7 +26,8 @@
       progress: { modules: {}, quizzes: {} },
       attempts: [],
       usage: { views: [], logins: [], dwell: {} },
-      settings: { passPct: PASS_DEFAULT }
+      about: { completed: false, videoPct: 0, pageSec: 0, minSec: 300, skips: 0, duration: 0 },
+      settings: { passPct: PASS_DEFAULT, aboutGate: false, aboutMinSec: 300 }
     };
   }
   function applyState(r) {
@@ -35,6 +37,7 @@
       progress: r.progress || e.progress,
       attempts: r.attempts || e.attempts,
       usage: r.usage || e.usage,
+      about: r.about || e.about,
       settings: r.settings || e.settings
     };
     S.usage.views = S.usage.views || []; S.usage.logins = S.usage.logins || []; S.usage.dwell = S.usage.dwell || {};
@@ -65,7 +68,7 @@
   /** Resolves once every progress/score write started so far has reached the server. */
   function flush() { return Promise.all(pending.slice()); }
 
-  function getSettings() { return { passPct: S.settings.passPct, modules: MODULES }; }
+  function getSettings() { return { passPct: S.settings.passPct, aboutGate: !!S.settings.aboutGate, aboutMinSec: S.settings.aboutMinSec || 300, modules: MODULES }; }
   function currentUser() { return S.user; }
 
   function strip(u) { return { id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.createdAt }; }
@@ -162,9 +165,14 @@
     del: function (id) { return api("POST", "admin/delete", { id: id }); },
     create: function (name, email, password, role) { return api("POST", "admin/create", { name: name, email: email, password: password, role: role }); },
     setPassword: function (id, password) { return api("POST", "admin/password", { id: id, password: password }); },
+    aboutReset: function (id) { return api("POST", "admin/aboutreset", { id: id }); },
     saveSettings: function (s) {
-      return api("POST", "admin/settings", { passPct: s.passPct }).then(function (r) {
-        if (!r.error) S.settings.passPct = Math.round(Number(s.passPct));
+      return api("POST", "admin/settings", s).then(function (r) {
+        if (!r.error) {
+          if (s.passPct !== undefined) S.settings.passPct = Math.round(Number(s.passPct));
+          if (s.aboutGate !== undefined) S.settings.aboutGate = !!s.aboutGate;
+          if (s.aboutMinSec !== undefined) S.settings.aboutMinSec = Math.round(Number(s.aboutMinSec));
+        }
         return r;
       });
     }
@@ -184,6 +192,22 @@
     }
     if (!me) { location.href = "login.html?next=" + encodeURIComponent(file + ".html"); return; }
     if (adminPages.indexOf(file) >= 0 && me.role !== "admin") { location.href = "user-dashboard.html"; return; }
+    // Gatekeeper: until About Us is complete, staff can only open Home, About Us and My Progress.
+    if (gateBlocked() && ["index", "about-us", "user-dashboard"].indexOf(file) < 0) { location.href = "about-us.html"; return; }
+  }
+
+  /** True when the About Us gate is on, the user is staff, and they have not completed About Us yet. */
+  function gateBlocked() {
+    return !!(S.user && S.user.role === "user" && S.settings.aboutGate && !(S.about && S.about.completed));
+  }
+
+  /** About Us heartbeat (video position + visibility). The server decides what counts; see functions/api. */
+  function aboutBeat(payload, keepalive) {
+    if (!S.user) return Promise.resolve({ error: "Not signed in." });
+    return api("POST", "about/beat", payload, !!keepalive).then(function (r) {
+      if (r && r.about) S.about = r.about;
+      return r;
+    });
   }
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -219,6 +243,10 @@
     getUsage: function () { return S.user ? S.usage : null; },
     isCertified: function () { return S.user ? isCertified() : false; },
     getSettings: getSettings, MODULES: MODULES,
+    getAbout: function () { return S.user ? S.about : null; }, gateBlocked: gateBlocked, aboutBeat: aboutBeat,
+    // run fn once session + data are loaded; works whether that already happened or not (a late-loading
+    // script can miss the one-time "df:ready" event, so pages use this instead of listening for it)
+    onReady: function (fn) { if (isReady) setTimeout(fn, 0); else document.addEventListener("df:ready", function () { fn(); }, { once: true }); },
     admin: admin, esc: esc
   };
 
@@ -230,6 +258,7 @@
     guardHTML();
     injectNav();
     try { trackView(); } catch (e) {}
+    isReady = true;
     document.dispatchEvent(new Event("df:ready"));
   });
 })();

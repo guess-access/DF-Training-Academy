@@ -28,6 +28,7 @@ th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{backg
 <div class="stat"><div class="l">Best score</div><div class="v" id="sBest">—</div><div class="bar"><div id="sBestBar" style="width:0%"></div></div></div>
 <div class="stat"><div class="l">Quiz attempts</div><div class="v" id="sAtt">—</div><div style="font-size:13px;color:#667085" id="sCert">—</div></div>
 </div>
+<h2>Step 1: About Us</h2><div id="aboutRow"></div>
 <h2>Modules</h2><div id="mods"></div>
 <h2>Score history (unique log)</h2>
 <table><thead><tr><th>Date</th><th>Quiz</th><th>Score</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
@@ -36,11 +37,13 @@ th,td{padding:11px 12px;border-bottom:1px solid #edf0f6;text-align:left}th{backg
 </main>
 <footer class="site-footer sec-footer"><span>© 2026 Dealerfocus Training Academy | All rights reserved.</span></footer>
 <script>
-document.addEventListener('df:ready',function(){
+DFAuth.onReady(function(){
   var me=DFAuth.current(); if(!me){location.href='login.html?next=user-dashboard.html';return;}
   document.getElementById('hello').textContent='My Progress — '+me.name;
   var p=DFAuth.getProgress(), at=DFAuth.getAttempts(), us=DFAuth.getUsage(), set=DFAuth.getSettings();
   var mods=set.modules||DFAuth.MODULES;
+  var ab=DFAuth.getAbout()||{};
+  document.getElementById('aboutRow').innerHTML='<div class="modrow"><div><b>About Us — team video &amp; time on page</b><div style="font-size:13px;color:#667085">'+(ab.completed?'Completed '+new Date(ab.completedAt).toLocaleString():'Video watched: '+(ab.videoPct||0)+'% • Time on page: '+Math.floor((ab.pageSec||0)/60)+'m of '+Math.round((ab.minSec||300)/60)+' min')+(set.aboutGate&&!ab.completed&&me.role==='user'?' • Modules unlock after this step':'')+'</div></div><div>'+(ab.completed?'<span class="badge pass">Done</span>':'<a class="btn" style="text-decoration:none" href="about-us.html">Open</a>')+'</div></div>';
   var done=mods.filter(function(m){return p.modules&&p.modules[m.id];}).length;
   document.getElementById('sMod').textContent=done+'/'+mods.length;
   document.getElementById('sModBar').style.width=Math.round(done/mods.length*100)+'%';

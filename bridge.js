@@ -239,7 +239,7 @@
     } catch (e) {}
   }
 
-  document.addEventListener("df:ready", function () {
+  DF().onReady(function () {
     var ctx = detect();
     if (!ctx) return;
     hookGradeQuiz(ctx);

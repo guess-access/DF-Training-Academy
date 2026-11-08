@@ -11,6 +11,12 @@ const CORE_MODULES = ["m1", "m2", "m3", "m4"];
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 100000; // Workers max
 const MIN_PASSWORD = 8;
+// About Us gate: the team video must be watched in order at normal speed; time on the page is also required.
+const ABOUT_MAX_DURATION = 3600;   // seconds; longer videos are refused
+const ABOUT_COVER_NEED = 0.97;     // share of the video that must have been played in order
+const BEAT_MAX_WALL = 20;          // time-on-page: a heartbeat gap longer than this adds no page time
+const COVER_MAX_WALL = 120;        // video credit: playback is capped by real elapsed time, so longer gaps are safe
+const ABOUT_DEFAULT_MIN_SEC = 300; // default minimum time on the About Us page (5 minutes)
 const MAX_FAILS = 8;
 const LOCK_MIN = 15;
 
@@ -62,6 +68,49 @@ async function getPassPct(env) {
   return n >= 1 && n <= 100 ? n : 80;
 }
 
+async function getAboutCfg(env) {
+  const { results } = await env.DB.prepare("SELECT key, value FROM settings WHERE key IN ('aboutGate','aboutMinSec')").all();
+  const m = {};
+  results.forEach((r) => { m[r.key] = r.value; });
+  let minSec = Number(m.aboutMinSec);
+  if (!(minSec >= 30 && minSec <= 3600)) minSec = ABOUT_DEFAULT_MIN_SEC;
+  return { gate: m.aboutGate === "1", minSec: Math.round(minSec) };
+}
+
+function countOnes(str) {
+  let n = 0;
+  for (let i = 0; i < str.length; i++) if (str.charCodeAt(i) === 49) n++;
+  return n;
+}
+
+function aboutSummary(row, cfg) {
+  const dur = row && row.duration ? row.duration : 0;
+  const n = Math.ceil(dur);
+  const covered = row && row.coverage ? countOnes(row.coverage) : 0;
+  return {
+    completed: !!(row && row.completed_at),
+    completedAt: row && row.completed_at ? row.completed_at : null,
+    videoPct: n ? Math.min(100, Math.floor((covered / n) * 100)) : 0,
+    pageSec: row ? Math.round(row.page_sec) : 0,
+    minSec: cfg.minSec,
+    skips: row ? row.violations : 0,
+    duration: dur
+  };
+}
+
+async function aboutDone(env, userId) {
+  const r = await env.DB.prepare("SELECT completed_at FROM about_progress WHERE user_id = ?").bind(userId).first();
+  return !!(r && r.completed_at);
+}
+
+/** Staff cannot record module progress or quiz scores until About Us is complete (when the gate is on). */
+async function gateBlocks(env, me) {
+  if (me.role === "admin") return false;
+  const cfg = await getAboutCfg(env);
+  if (!cfg.gate) return false;
+  return !(await aboutDone(env, me.id));
+}
+
 async function currentUser(req, env) {
   const token = getCookie(req, "df_session");
   if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
@@ -99,6 +148,8 @@ async function buildUserData(env, userId) {
     progress.quizzes[r.quiz_id] = { score: r.score, passed: !!r.passed, at: r.at };
     if (r.edited_by_admin) progress.quizzes[r.quiz_id].editedByAdmin = true;
   });
+  const cfgAbout = await getAboutCfg(env);
+  const aboutRow = await env.DB.prepare("SELECT coverage, page_sec, duration, violations, completed_at FROM about_progress WHERE user_id = ?").bind(userId).first();
   const usage = {
     views: views.results.reverse(),
     logins: logins.results.reverse(),
@@ -113,7 +164,8 @@ async function buildUserData(env, userId) {
       if (a.extra) { try { o.extra = JSON.parse(a.extra); } catch (e) {} }
       return o;
     }),
-    usage
+    usage,
+    about: aboutSummary(aboutRow, cfgAbout)
   };
 }
 
@@ -125,9 +177,11 @@ function isCertified(progress, passPct) {
 
 async function buildState(env, user) {
   const passPct = await getPassPct(env);
-  if (!user) return { user: null, settings: { passPct } };
+  const cfg = await getAboutCfg(env);
+  const settings = { passPct, aboutGate: cfg.gate, aboutMinSec: cfg.minSec };
+  if (!user) return { user: null, settings };
   const data = await buildUserData(env, user.id);
-  return { user, settings: { passPct }, ...data };
+  return { user, settings, ...data };
 }
 
 async function recordLogin(env, userId, req) {
@@ -227,6 +281,7 @@ async function touch(env, userId) {
 async function setModule(req, env, me) {
   const b = await readBody(req);
   if (!b || MODULE_IDS.indexOf(b.id) < 0) return fail("Unknown module.");
+  if (await gateBlocks(env, me)) return fail("Complete the About Us video first.", 403);
   if (b.done === false) {
     await env.DB.prepare("DELETE FROM progress WHERE user_id = ? AND module_id = ?").bind(me.id, b.id).run();
   } else {
@@ -254,6 +309,7 @@ async function upsertQuiz(env, userId, quiz, pct, passPct, t, edited) {
 async function logQuiz(req, env, me) {
   const b = await readBody(req);
   if (!b || QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+  if (await gateBlocks(env, me)) return fail("Complete the About Us video first.", 403);
   const total = Number(b.total) > 0 ? Math.min(Number(b.total), 1000) : 100;
   const raw = Number(b.raw);
   if (!(raw >= 0) || raw > total) return fail("Invalid score.");
@@ -290,6 +346,62 @@ async function logUsage(req, env, me) {
   return json({ ok: true });
 }
 
+/* About Us heartbeat. The browser reports the video position every few seconds; the SERVER decides what counts:
+ * only in-order playback at normal speed (position advancing no faster than the wall clock) earns coverage,
+ * jumps ahead / fast-forward earn nothing and are counted as skips, and time on the page accrues only while
+ * the tab is visible. Completion needs ~all of the video covered + the video finished + the minimum page time. */
+async function aboutBeat(req, env, me) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  const pos = Number(b.pos), dur = Number(b.duration);
+  if (!(pos >= 0) || !(dur > 0) || dur > ABOUT_MAX_DURATION) return fail("Invalid video data.");
+  const cfg = await getAboutCfg(env);
+  const nowMs = Date.now();
+  const n = Math.ceil(dur);
+  const row = await env.DB.prepare("SELECT * FROM about_progress WHERE user_id = ?").bind(me.id).first();
+  if (row && row.completed_at) return json({ ok: true, about: aboutSummary(row, cfg) });
+
+  let cov = row && row.coverage ? row.coverage : "";
+  let pageSec = row ? row.page_sec : 0;
+  let viol = row ? row.violations : 0;
+  let ended = row ? row.ended : 0;
+  // a different video length means the video was replaced: start the coverage over
+  if (row && row.duration && Math.abs(row.duration - dur) > 2) { cov = ""; ended = 0; }
+  if (cov.length < n) cov = cov + "0".repeat(n - cov.length);
+  if (cov.length > n) cov = cov.slice(0, n);
+
+  const lastBeat = row && row.last_beat ? Date.parse(row.last_beat) : null;
+  const wall = lastBeat ? (nowMs - lastBeat) / 1000 : 0;
+  if (lastBeat && wall < 1.5) return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: null }, cfg) }); // ignore bursts
+
+  if (lastBeat && wall <= BEAT_MAX_WALL && b.visible === true) pageSec += wall;
+
+  const lastPos = row && row.last_pos !== null && row.last_pos !== undefined ? row.last_pos : null;
+  if (lastBeat && lastPos !== null && wall <= COVER_MAX_WALL && row.last_playing && b.playing === true && Number(b.rate) === 1) {
+    const d = pos - lastPos;
+    if (d > 0 && d <= wall * 1.15 + 0.75) {
+      const chars = cov.split("");
+      for (let sec = Math.floor(lastPos); sec < Math.floor(pos) && sec < n; sec++) { if (sec >= 0) chars[sec] = "1"; }
+      cov = chars.join("");
+    } else if (d > wall * 1.5 + 3) {
+      viol++; // jumped ahead or fast-forwarded: no credit
+    }
+  }
+  if (b.ended === true && pos >= dur - 2) ended = 1;
+
+  const covered = countOnes(cov);
+  let completedAt = null;
+  if (covered >= Math.ceil(n * ABOUT_COVER_NEED) && ended && pageSec >= cfg.minSec) completedAt = nowISO();
+
+  await env.DB.prepare(
+    "INSERT INTO about_progress (user_id, coverage, page_sec, last_pos, last_beat, last_playing, duration, ended, violations, completed_at) VALUES (?,?,?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(user_id) DO UPDATE SET coverage=excluded.coverage, page_sec=excluded.page_sec, last_pos=excluded.last_pos, last_beat=excluded.last_beat, " +
+    "last_playing=excluded.last_playing, duration=excluded.duration, ended=excluded.ended, violations=excluded.violations, completed_at=excluded.completed_at"
+  ).bind(me.id, cov, pageSec, pos, new Date(nowMs).toISOString(), b.playing === true ? 1 : 0, dur, ended, viol, completedAt).run();
+  if (completedAt) await touch(env, me.id);
+  return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: completedAt }, cfg) });
+}
+
 /* ---------- admin ---------- */
 async function adminUsers(env) {
   const passPct = await getPassPct(env);
@@ -299,13 +411,14 @@ async function adminUsers(env) {
        (SELECT COUNT(*) FROM progress p WHERE p.user_id = u.id AND p.module_id IN ('m1','m2','m3','m4')) AS core,
        (SELECT COUNT(*) FROM attempts a WHERE a.user_id = u.id) AS attempts,
        (SELECT MAX(score) FROM quizzes q WHERE q.user_id = u.id) AS best,
-       (SELECT score FROM quizzes q WHERE q.user_id = u.id AND q.quiz_id = 'quiz_final') AS final
+       (SELECT score FROM quizzes q WHERE q.user_id = u.id AND q.quiz_id = 'quiz_final') AS final,
+       (SELECT completed_at FROM about_progress a WHERE a.user_id = u.id) AS about_done
      FROM users u ORDER BY u.created_at`
   ).all();
   return json(results.map((r) => ({
     id: r.id, name: r.name, email: r.email, role: r.role, createdAt: r.created_at,
     logins: r.logins, lastActive: r.last_active, modulesDone: r.mods + "/6",
-    attempts: r.attempts, best: r.best, certified: r.core === 4 && r.final !== null && r.final >= passPct
+    attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: r.core === 4 && r.final !== null && r.final >= passPct
   })));
 }
 
@@ -330,9 +443,18 @@ async function adminAction(action, req, env, me) {
   const b = await readBody(req);
   if (!b) return fail("Invalid request.");
   if (action === "settings") {
-    const v = Math.round(Number(b.passPct));
-    if (!(v >= 1 && v <= 100)) return fail("Pass mark must be 1-100.");
-    await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('passPct', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(String(v)).run();
+    const up = "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value";
+    if (b.passPct !== undefined) {
+      const v = Math.round(Number(b.passPct));
+      if (!(v >= 1 && v <= 100)) return fail("Pass mark must be 1-100.");
+      await env.DB.prepare(up).bind("passPct", String(v)).run();
+    }
+    if (b.aboutGate !== undefined) await env.DB.prepare(up).bind("aboutGate", b.aboutGate ? "1" : "0").run();
+    if (b.aboutMinSec !== undefined) {
+      const m = Math.round(Number(b.aboutMinSec));
+      if (!(m >= 30 && m <= 3600)) return fail("Minimum About Us time must be between 30 seconds and 60 minutes.");
+      await env.DB.prepare(up).bind("aboutMinSec", String(m)).run();
+    }
     return json({ ok: true });
   }
   if (action === "create") {
@@ -365,6 +487,10 @@ async function adminAction(action, req, env, me) {
     ]);
     return json({ ok: true });
   }
+  if (action === "aboutreset") {
+    await env.DB.prepare("DELETE FROM about_progress WHERE user_id = ?").bind(id).run();
+    return json({ ok: true });
+  }
   if (action === "reset") {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
@@ -392,6 +518,7 @@ async function adminAction(action, req, env, me) {
       env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM usage_events WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM about_progress WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id)
     ]);
     return json({ ok: true });
@@ -430,6 +557,7 @@ export async function onRequest(context) {
     if (method === "POST" && route === "module") return await setModule(request, env, me);
     if (method === "POST" && route === "quiz") return await logQuiz(request, env, me);
     if (method === "POST" && route === "usage") return await logUsage(request, env, me);
+    if (method === "POST" && route === "about/beat") return await aboutBeat(request, env, me);
 
     if (route.indexOf("admin/") === 0) {
       if (me.role !== "admin") return fail("Admin only.", 403);

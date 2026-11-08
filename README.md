@@ -42,7 +42,24 @@ printf "ADMIN_CODE=dev-code\n" > .dev.vars
 npx wrangler pages dev . --d1=DB
 ```
 
+## About Us gate (Step 1 for staff)
+
+`about-us.html` holds the "What we do" video (`assets/what-we-do-video.mp4`) and records completion on the server.
+The player has no seek bar: skipping ahead and speed changes are undone, and playback pauses when the tab is hidden.
+The browser sends a heartbeat every few seconds and the **server** decides what counts (`functions/api/[[path]].js`,
+`aboutBeat`): only in-order playback at normal speed earns coverage (about 97% of the video must be covered and the
+video must finish), and time on the page accrues only while the tab is visible (default minimum 5 minutes).
+Skip/fast-forward attempts are counted and shown to admins.
+
+- **Admin dashboard > About Us gate**: turn the gate on/off and set the minimum minutes. While ON, staff can open only Home,
+  About Us and My Progress, and the API refuses to record module progress or quiz scores until About Us is complete.
+  Admins are exempt. The gate is OFF by default so a missing video can never lock everyone out.
+- Per user: an admin can see About Us status and reset it (**View / edit > Reset About Us**).
+- Existing databases need the `about_progress` table and the two settings rows from `schema.sql`.
+- Cloudflare Pages allows files up to **25 MiB**; keep the video under that (the current file is about 21.7 MiB,
+  854x480, 10 fps, mono audio, H.264/AAC with `faststart`).
+
 ## Notes
 
-- Module videos are referenced as `assets/<name>.mp4` but the video files are not in the repo yet; add them to `assets/` to enable them.
+- Module 02 and other pages still reference `assets/*.mp4` clips that are not in the repo; add them to `assets/` to enable them.
 - Google Form assessments (Module 02) cannot be auto-graded; staff use **Log score** and an admin can verify/edit.

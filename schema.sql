@@ -75,3 +75,21 @@ CREATE TABLE IF NOT EXISTS login_failures (
   count        INTEGER NOT NULL,
   locked_until TEXT
 );
+
+-- About Us gate: server-side record of the team video being played in order at normal speed.
+-- coverage = one character per second of video ('1' = that second was played in order).
+CREATE TABLE IF NOT EXISTS about_progress (
+  user_id      TEXT PRIMARY KEY,
+  coverage     TEXT NOT NULL DEFAULT '',
+  page_sec     REAL NOT NULL DEFAULT 0,
+  last_pos     REAL,
+  last_beat    TEXT,
+  last_playing INTEGER NOT NULL DEFAULT 0,
+  duration     REAL,
+  ended        INTEGER NOT NULL DEFAULT 0,
+  violations   INTEGER NOT NULL DEFAULT 0,
+  completed_at TEXT
+);
+-- Gate is OFF by default; an admin turns it on (Admin dashboard) once the video file is in assets/.
+INSERT OR IGNORE INTO settings (key, value) VALUES ('aboutGate', '0');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('aboutMinSec', '300');

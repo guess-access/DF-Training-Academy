@@ -14,7 +14,7 @@ a{color:inherit;text-decoration:none;}
 .brand{display:flex;align-items:center;gap:12px;}
 .brand img{height:38px;width:auto;}
 .brand span{font-family:var(--font-display);font-weight:700;font-size:19px;}
-.site-nav{display:flex;gap:22px;flex-wrap:wrap;}
+.site-nav{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
 .site-nav a{font-size:14px;font-weight:600;opacity:.8;}
 .site-nav a:hover{opacity:1;}
 .site-nav a.active-page{opacity:1;font-weight:700;}

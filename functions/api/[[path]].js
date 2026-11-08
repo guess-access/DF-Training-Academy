@@ -8,6 +8,7 @@
 const MODULE_IDS = ["m1", "m2", "m3", "m4", "m5", "m6"];
 const QUIZ_IDS = ["quiz_m1_usa", "quiz_m2_vehicle", "quiz_m3_tools", "quiz_m4_csr", "quiz_final", "quiz_m6_refresh"];
 const CORE_MODULES = ["m1", "m2", "m3", "m4"];
+const REQUIRED_MODULES = ["m1", "m2", "m3", "m4", "m5"]; // Module 6 (Refresher) is optional
 // assessment that decides each module; null = the module has no assessment, so 100% completion alone completes it
 const MODULE_QUIZ = { m1: "quiz_m1_usa", m2: "quiz_m2_vehicle", m3: null, m4: "quiz_m4_csr", m5: "quiz_final", m6: null };
 const SESSION_DAYS = 30;
@@ -490,7 +491,7 @@ async function adminUsers(env) {
   const doneFor = (uid) => MODULE_IDS.filter((m) => moduleCompleted(m, (comps[uid] || {})[m], (scores[uid] || {})[MODULE_QUIZ[m]], passPct));
   return json(results.map((r) => ({
     id: r.id, name: r.name, email: r.email, role: r.role, createdAt: r.created_at,
-    logins: r.logins, lastActive: r.last_active, modulesDone: doneFor(r.id).length + "/6",
+    logins: r.logins, lastActive: r.last_active, modulesDone: doneFor(r.id).filter((m) => REQUIRED_MODULES.indexOf(m) >= 0).length + "/" + REQUIRED_MODULES.length,
     attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: CORE_MODULES.every((m) => doneFor(r.id).indexOf(m) >= 0) && r.final !== null && r.final >= passPct
   })));
 }

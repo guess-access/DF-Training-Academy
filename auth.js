@@ -14,7 +14,7 @@
     { id: "m3", title: "Module 03 — Program Software & Tools", href: "module-03-software-tools.html", quiz: "quiz_m3_tools" },
     { id: "m4", title: "Module 04 — CSR Fundamentals", href: "module-04-csr-fundamentals.html", quiz: "quiz_m4_csr" },
     { id: "m5", title: "Module 05 — Certification (Final)", href: "module-05-certification.html", quiz: "quiz_final" },
-    { id: "m6", title: "Module 06 — Refresher Courses", href: "module-06-refresher-courses.html", quiz: "quiz_m6_refresh" }
+    { id: "m6", title: "Module 06 — Refresher Courses (Optional)", href: "module-06-refresher-courses.html", quiz: "quiz_m6_refresh", optional: true }
   ];
 
   /* ---- in-memory copy of the signed-in user's data (source of truth is the server) ---- */

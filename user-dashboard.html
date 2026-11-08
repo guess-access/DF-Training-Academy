@@ -52,7 +52,7 @@ DFAuth.onReady(function(){
   var me=DFAuth.current(); if(!me){location.href='login.html?next=user-dashboard.html';return;}
   document.getElementById('hello').textContent='My Progress — '+me.name;
   var p=DFAuth.getProgress(), at=DFAuth.getAttempts(), us=DFAuth.getUsage(), set=DFAuth.getSettings();
-  var mods=set.modules||DFAuth.MODULES;
+  var allMods=set.modules||DFAuth.MODULES, mods=allMods.filter(function(m){return !m.optional;});
   var ab=DFAuth.getAbout()||{};
   document.getElementById('aboutRow').innerHTML='<div class="modrow"><div><b>About Us — team video &amp; time on page</b><div style="font-size:13px;color:#667085">'+(ab.completed?'Completed '+new Date(ab.completedAt).toLocaleString():'Video watched: '+(ab.videoPct||0)+'% • Time on page: '+Math.floor((ab.pageSec||0)/60)+'m of '+Math.round((ab.minSec||300)/60)+' min')+(set.aboutGate&&!ab.completed&&me.role==='user'?' • Modules unlock at 50% of the video':'')+'</div></div><div>'+(ab.completed?'<span class="badge pass">Done</span>':'<a class="btn" style="text-decoration:none" href="about-us.html">Open</a>')+'</div></div>';
   var done=mods.filter(function(m){return p.modules&&p.modules[m.id];}).length;
@@ -75,6 +75,10 @@ DFAuth.onReady(function(){
     return '<div class="modcard"><div class="mc-head"><b>'+DFAuth.esc(m.title)+'</b><span class="badge '+(d?'pass':'pend')+'">'+(d?'Completed':'In progress')+'</span></div>'+
       '<div class="mc-line"><span class="lbl">Completion Rate</span><div class="bar"><div style="width:'+pct+'%;background:'+(cOk?'#11663d':'#1f5eff')+'"></div></div><span class="val'+(cOk?' ok':'')+'">'+cTxt+'</span></div>'+
       '<div class="mc-line"><span class="lbl">Assessment Score</span>'+sBar+'<span class="val'+(sOk?' ok':'')+'">'+sTxt+'</span></div>'+
+      '<div class="mc-foot"><a class="btn sec" style="text-decoration:none" href="'+m.href+'">Open</a></div></div>';
+  }).join('')+allMods.filter(function(m){return m.optional;}).map(function(m){
+    return '<div class="modcard"><div class="mc-head"><b>'+DFAuth.esc(m.title)+'</b><span class="badge pend">Optional</span></div>'+
+      '<div class="mc-line"><span class="lbl">Not required</span><span class="blank"></span><span class="val">Does not affect certification</span></div>'+
       '<div class="mc-foot"><a class="btn sec" style="text-decoration:none" href="'+m.href+'">Open</a></div></div>';
   }).join('');
   document.getElementById('rows').innerHTML=at.length?at.slice().reverse().map(function(a){

@@ -12,7 +12,7 @@ Training hub with 2 access roles: Admin (full results, progress and usage view +
 ## Deploy (Netlify from GitHub)
 
 1. Netlify: Add new site > Import an existing project > GitHub > this repo.
-2. Branch: main. Build command: none. Publish directory: . (see netlify.toml).
+2. Branch: App. Build command: none. Publish directory: . (see netlify.toml).
 3. Deploy, then test /login.html as admin and as a new user.
 
 ## Production backend (optional)

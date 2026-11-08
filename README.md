@@ -44,7 +44,7 @@ npx wrangler pages dev . --d1=DB
 
 ## About Us gate (Step 1 for staff)
 
-`about-us.html` holds the "What we do" video (`assets/what-we-do-video.mp4`) and records completion on the server.
+`about-us.html` holds the About Us video (`assets/about-us-video.mp4`) and records completion on the server.
 The player has no seek bar: skipping ahead and speed changes are undone, and playback pauses when the tab is hidden.
 The browser sends a heartbeat every few seconds and the **server** decides what counts (`functions/api/[[path]].js`,
 `aboutBeat`): only in-order playback at normal speed earns coverage (about 97% of the video must be covered and the
@@ -56,8 +56,11 @@ Skip/fast-forward attempts are counted and shown to admins.
   Admins are exempt. The gate is OFF by default so a missing video can never lock everyone out.
 - Per user: an admin can see About Us status and reset it (**View / edit > Reset About Us**).
 - Existing databases need the `about_progress` table and the two settings rows from `schema.sql`.
-- Cloudflare Pages allows files up to **25 MiB**; keep the video under that (the current file is about 21.7 MiB,
-  854x480, 10 fps, mono audio, H.264/AAC with `faststart`).
+- Cloudflare Pages allows files up to **25 MiB** (and GitHub 100 MB), so the video is compressed to fit: the current
+  file is about 23 MiB, 1280x720, 10 fps, mono audio, H.264 (x264 CRF 31) + AAC with `faststart`. To replace it,
+  re-encode the new source to under 25 MiB and overwrite `assets/about-us-video.mp4`; if the length changes, an
+  admin should reset About Us progress (the server restarts coverage automatically when the duration differs by
+  more than 2 seconds).
 
 ## Notes
 

@@ -105,7 +105,7 @@ async function saveGate(){
   var on=document.getElementById('gateOn').checked, mins=Number(document.getElementById('minIn').value), m=document.getElementById('gateMsg');
   m.style.color='#a61e2a';m.textContent='';
   if(!(mins>=1&&mins<=60)){m.textContent='Minutes must be 1-60.';return;}
-  if(on&&!DFAuth.getSettings().aboutGate&&!confirm('Staff will be locked out of the Modules until they finish the About Us video and the minimum time on the page.\n\nBefore turning this on, make sure the video file (assets/what-we-do-video.mp4) is in the site and plays on the About Us page.\n\nTurn the gate on?'))return;
+  if(on&&!DFAuth.getSettings().aboutGate&&!confirm('Staff will be locked out of the Modules until they finish the About Us video and the minimum time on the page.\n\nBefore turning this on, make sure the video file (assets/about-us-video.mp4) is in the site and plays on the About Us page.\n\nTurn the gate on?'))return;
   var r=await DFAuth.admin.saveSettings({aboutGate:on,aboutMinSec:Math.round(mins*60)});
   if(r.error){m.textContent=r.error;return;}
   m.style.color='#11663d';m.textContent='Saved. Gate is '+(on?'ON':'OFF')+'.';

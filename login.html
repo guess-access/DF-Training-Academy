@@ -6,8 +6,22 @@
 <link rel="stylesheet" href="style.css"><script src="auth.js"></script>
 <style>
 body{min-height:100vh;display:flex;flex-direction:column}
-.auth-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:1200px;margin:0 auto;padding:40px 20px;box-sizing:border-box}
+.auth-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:1200px;margin:0 auto;padding:84px 20px 40px;box-sizing:border-box}
 .auth-title{margin:0 0 28px;text-align:center;font-family:'Poppins',Arial,Helvetica,sans-serif;font-weight:800;font-size:clamp(26px,4.4vw,52px);line-height:1.15;letter-spacing:.03em;text-transform:uppercase;color:#050141}
+.s-wrap{position:relative;display:inline-block}
+.grad-cap{position:absolute;left:50%;bottom:60%;width:1.5em;height:auto;pointer-events:none;overflow:visible;transform-origin:50% 100%;transform:translate(-50%,0) rotate(-6deg);animation:cap-pop 3.4s cubic-bezier(.3,.7,.4,1) .7s both}
+.cap-tassel{transform-box:fill-box;transform-origin:50% 0;animation:tassel-swing 1.6s ease-in-out 3.3s 3}
+@keyframes cap-pop{
+  0%{transform:translate(-50%,115%) scale(.15) rotate(-35deg);opacity:0}
+  10%{opacity:1}
+  42%{transform:translate(-8%,-115%) scale(1.15) rotate(24deg);opacity:1}
+  66%{transform:translate(-50%,-12%) scale(1) rotate(-12deg)}
+  76%{transform:translate(-50%,-34%) scale(1) rotate(3deg)}
+  88%{transform:translate(-50%,3%) scale(1) rotate(-8deg)}
+  100%{transform:translate(-50%,0) scale(1) rotate(-6deg);opacity:1}
+}
+@keyframes tassel-swing{0%,100%{transform:rotate(0)}30%{transform:rotate(14deg)}70%{transform:rotate(-10deg)}}
+@media (prefers-reduced-motion:reduce){.grad-cap,.cap-tassel{animation:none}}
 .auth-card{width:100%;max-width:460px}
 .auth-logo{display:flex;justify-content:center;margin-bottom:18px}
 .auth-logo img{height:72px;width:auto;margin:0 auto}
@@ -30,7 +44,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 </head>
 <body>
 <main class="auth-wrap">
-<h1 class="auth-title">Dealerfocus<br>Training Academy</h1>
+<h1 class="auth-title">Dealerfocu<span class="s-wrap">s<svg class="grad-cap" viewBox="0 0 120 84" aria-hidden="true" focusable="false"><path d="M26 40v20c0 9 15 15 34 15s34-6 34-15V40L60 54z" fill="#1d1d7a"/><path d="M26 40l34 14 34-14" fill="none" stroke="#050141" stroke-width="2"/><polygon points="60,4 119,27 60,50 1,27" fill="#050141" stroke="#00eeff" stroke-width="2.5" stroke-linejoin="round"/><circle cx="60" cy="27" r="3.4" fill="#00eeff"/><g class="cap-tassel"><path d="M60 27 L103 36 V63" fill="none" stroke="#f5b301" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M98 61h10l2 17H96z" fill="#f5b301"/></g></svg></span><br>Training Academy</h1>
 <div class="auth-card">
 <div class="auth-logo"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"></div>
 <h2 class="sec-headings">Welcome Trainees</h2>

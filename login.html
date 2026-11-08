@@ -63,7 +63,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 document.getElementById('fLogin').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;document.getElementById('ok').style.display='none';}
 function showOk(m){var e=document.getElementById('ok');e.style.display='block';e.textContent=m;document.getElementById('err').style.display='none';}
-function next(){var q=new URLSearchParams(location.search).get('next');return q||null;}
+function next(){return DFAuth.safeNext();}
 function go(u){if(DFAuth.gateBlocked()){location.href='about-us.html';return;}var n=next();if(n){location.href=n;return;}location.href=(u.role==='admin')?'admin-dashboard.html':'user-dashboard.html';}
 async function doLogin(){var r=await DFAuth.login(document.getElementById('liEmail').value,document.getElementById('liPass').value);if(r.error)showErr(r.error);else{showOk('Logged in. Redirecting…');setTimeout(function(){go(r.user);},400);}}
 DFAuth.onReady(function(){var me=DFAuth.current();if(me&&!next())go(me);});

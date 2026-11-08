@@ -135,8 +135,10 @@
     if (payload.pct > (c.pages[payload.page] || 0)) c.pages[payload.page] = payload.pct;
     c.total = payload.total;
     var sum = Object.keys(c.pages).reduce(function (a, k) { return a + Math.min(100, c.pages[k]); }, 0);
+    var was100 = c.reached100;
     c.pct = Math.min(100, Math.floor(sum / c.total));
     write("pace", payload);
+    if (c.pct >= 100 && !was100) { c.reached100 = true; document.dispatchEvent(new CustomEvent("df:module-read", { detail: payload.module })); }
   }
   /** Ask the server to issue the certificate if everything is complete. Resolves to the certificate or null. */
   function checkCertificate() {
@@ -188,6 +190,12 @@
     }
   };
 
+  /* ---- login redirect target: a page on this site only, never another site or a script URL ---- */
+  function safeNext() {
+    var q = new URLSearchParams(location.search).get("next");
+    return q && /^[A-Za-z0-9][A-Za-z0-9_\-\/]*(\.html)?$/.test(q) ? q : null;
+  }
+
   /* ---- page guard + nav ---- */
   function guardHTML() {
     // Entire site is private: every page requires an active login session.
@@ -197,7 +205,7 @@
     if (file === "") file = "index";
     var adminPages = ["admin-dashboard", "admin"];
     if (file === "login") {
-      if (me) { var n = new URLSearchParams(location.search).get("next"); location.href = n || (me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html"); }
+      if (me) { var n = safeNext(); location.href = n || (me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html"); }
       return;
     }
     if (!me) { location.href = "login.html?next=" + encodeURIComponent(file + ".html"); return; }
@@ -246,6 +254,8 @@
   }
 
   window.DFAuth = {
+    safeNext: safeNext,
+    reloadState: function () { return flush().then(function () { return api("GET", "state"); }).then(function (r) { if (!r.error) applyState(r); }); },
     signup: signup, login: login, logout: logout, current: currentUser,
     trackView: trackView, markModule: markModule, logQuiz: logQuiz, logDwell: logDwell, flush: flush,
     getProgress: function () { return S.user ? S.progress : null; },

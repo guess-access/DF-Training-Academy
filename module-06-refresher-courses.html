@@ -104,7 +104,7 @@ body{overflow-x:hidden;}
       var isOpen = panel.classList.toggle('is-open');
       this.setAttribute('aria-expanded', isOpen);
       var frame = document.getElementById('training-embed-frame');
-      if (isOpen && !frame.src) { frame.src = frame.dataset.src; }
+      if (isOpen) { dfLoadTraining(frame); }
     ">
       <span>Customer Service Training - Call Coaching</span>
       <span class="chevron" aria-hidden="true"></span>
@@ -113,6 +113,22 @@ body{overflow-x:hidden;}
       <iframe id="training-embed-frame" class="training-embed" data-src="training-1.html" title="Customer Service Training - Call Coaching" loading="lazy" allow="clipboard-write"></iframe>
     </div>
   </section>
+<script>
+function dfLoadTraining(frame){
+  if(frame.dataset.checked) return;
+  frame.dataset.checked='1';
+  fetch(frame.dataset.src,{method:'HEAD',cache:'no-store'}).then(function(r){
+    if(!r.ok) throw new Error('missing');
+    frame.src=frame.dataset.src;
+  }).catch(function(){
+    frame.style.display='none';
+    var n=document.createElement('p');
+    n.style.cssText='margin:0;padding:28px 20px;text-align:center;font-weight:700;color:#050141;';
+    n.textContent='This call coaching training is coming soon. Please check back later.';
+    frame.parentNode.appendChild(n);
+  });
+}
+</script>
 <div class="df-next-row" style="margin:32px 0 190px"><a class="cta-button" data-df-next href="/user-dashboard">Finish: View My Progress →</a></div>
 </main>
 <footer class="site-footer sec-footer">

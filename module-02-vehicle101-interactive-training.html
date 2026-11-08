@@ -428,7 +428,7 @@
   <div class="header">
     <h1>Everything Vehicle: Your Ultimate Guide to Understand Your Customers</h1>
     <p>Auto Services & Car Parts Knowledge</p>
-    <button class="back-btn" onclick="history.go(-2)">← Back to Modules Tab</button>
+    <button class="back-btn" onclick="window.top.location.href='/modules'">← Back to Modules Tab</button>
   </div>
 
   <div class="assessment-btn-wrap">
@@ -990,5 +990,25 @@
     updateProgress();
   </script>
 
-<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>
+<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script><script>
+/* A video whose file is not uploaded yet shows a note instead of a dead player. Adding the file brings the player back. */
+(function(){
+  function soon(v){
+    if(v.dataset.dfSoon) return;
+    v.dataset.dfSoon='1';
+    v.style.display='none';
+    var d=document.createElement('div');
+    d.setAttribute('role','note');
+    d.style.cssText='padding:26px 18px;border-radius:6px;background:#eef1f6;color:#050141;text-align:center;font-family:Arial,sans-serif;';
+    d.innerHTML='<div style="font-weight:800;margin-bottom:4px">Video coming soon</div><div style="font-size:13px">This video is being prepared. You can continue with the lesson.</div>';
+    v.parentNode.insertBefore(d,v.nextSibling);
+  }
+  document.querySelectorAll('video').forEach(function(v){
+    if(v.networkState===3){soon(v);return;}
+    var ss=v.querySelectorAll('source');
+    (ss.length?ss[ss.length-1]:v).addEventListener('error',function(){soon(v);});
+  });
+})();
+</script>
+</body>
 </html>

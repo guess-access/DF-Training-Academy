@@ -73,7 +73,8 @@
       "#dfPace .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.25);margin-top:7px;overflow:hidden;position:relative;}" +
       "#dfPace .bar i{display:block;height:100%;background:#19c7ff;border-radius:99px;transition:width .5s;}" +
       "#dfPace .bar b{position:absolute;left:50%;top:-1px;width:2px;height:8px;background:#fff;}" +
-      "#dfPace.ok{background:#11663d;}#dfPace.shake{transform:translateX(6px);}#dfPace.hide{opacity:0;pointer-events:none;}";
+      "#dfPace.ok{background:#11663d;}#dfPace.shake{transform:translateX(6px);}#dfPace.hide{opacity:0;pointer-events:none;}" +
+      "@media(max-width:640px){#dfPace{left:12px;right:12px;bottom:calc(var(--df-track-h,0px) + 20px);max-width:none;}.df-next-row{margin-bottom:240px !important;}.controls,.actions{margin-bottom:150px !important;}}";
     document.head.appendChild(css);
     pill = document.createElement("div");
     pill.id = "dfPace"; pill.setAttribute("role", "status"); pill.setAttribute("aria-live", "polite");

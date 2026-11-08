@@ -57,7 +57,7 @@ input,select{padding:8px 10px;border:1px solid #cfd7e5;border-radius:8px;font-si
 <script>
 var DATA=[];
 DFAuth.onReady(function(){
-  var me=DFAuth.current(); if(!me||me.role!=='admin'){location.href='login.html?next=admin-dashboard.html';return;}
+  var me=DFAuth.current(); if(!me||me.role!=='admin'){location.href=me?'user-dashboard.html':'login.html?next=admin-dashboard.html';return;}
   var st=DFAuth.getSettings();
   document.getElementById('passIn').value=st.passPct;
   document.getElementById('gateOn').checked=!!st.aboutGate;

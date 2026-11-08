@@ -79,14 +79,45 @@
     } catch (e) {}
   }
 
-  /* ---- Module 04 (csr_fundamentals): knowledge checks + quality form + finish ---- */
-  var csr = { ok: 0, n: 0 };
-  function csrLog(ctx) {
+  /* ---- Module 04 (csr_fundamentals): each knowledge check counts once, on its first answer.
+     The score is recorded when every check has been answered, then a new attempt can start. ---- */
+  function csrKey() { return "df_csr_v1_" + me().id; }
+  function csrMarks() { try { return JSON.parse(localStorage.getItem(csrKey())) || {}; } catch (e) { return {}; } }
+  function csrPages() {
+    var out = [];
+    P.forEach(function (p, i) { if (p.q || (p.b && p.b.indexOf("sp(this") >= 0)) out.push(i); });
+    return out;
+  }
+  function csrResult(ctx, right, total) {
+    var pct = Math.round(right / total * 100), pass = pct >= passPct();
+    var fb = document.getElementById("fb") || document.getElementById("sf");
+    if (!fb) return;
+    var box = document.createElement("div");
+    box.style.cssText = "margin-top:12px;font-weight:800";
+    box.textContent = "Knowledge checks finished: " + right + " of " + total + " correct (" + pct + "%). " + (pass ? "Passed." : "You need " + passPct() + "% to pass. ");
+    if (!pass) {
+      var again = document.createElement("button");
+      again.type = "button"; again.className = "nav"; again.textContent = "Retake the checks";
+      again.onclick = function () { cur = csrPages()[0]; answered = false; window.render(); window.scrollTo(0, 0); };
+      box.appendChild(again);
+    }
+    fb.appendChild(box);
+  }
+  function csrMark(ctx, ok) {
     try {
-      if (!me() || !csr.n) return;
-      var pct = Math.round(csr.ok / csr.n * 100);
-      DF().logQuiz(ctx.quiz, csr.ok, csr.n, { page: "csr_fundamentals", live: true });
-      if (csr.n >= 3 && pct >= passPct()) DF().markModule(ctx.module, true);
+      if (!me() || typeof cur === "undefined" || typeof P === "undefined") return;
+      var pages = csrPages(), marks = csrMarks();
+      if (pages.indexOf(cur) < 0 || marks[cur] !== undefined) return;
+      marks[cur] = !!ok;
+      if (pages.some(function (i) { return marks[i] === undefined; })) {
+        localStorage.setItem(csrKey(), JSON.stringify(marks));
+        return;
+      }
+      localStorage.removeItem(csrKey());
+      var right = pages.filter(function (i) { return marks[i]; }).length;
+      DF().logQuiz(ctx.quiz, right, pages.length, { page: "csr_fundamentals" });
+      csrResult(ctx, right, pages.length);
+      refreshWidget(ctx);
     } catch (e) {}
   }
   function hookCSR(ctx) {
@@ -95,7 +126,7 @@
         var oAns = window.ans;
         window.ans = function (btn, i, a, w) {
           var r = oAns.apply(this, arguments);
-          try { csr.n++; if (i === a) csr.ok++; csrLog(ctx); } catch (e) {}
+          csrMark(ctx, i === a);
           return r;
         };
         window.ans.__df = true;
@@ -104,40 +135,10 @@
         var oSp = window.sp;
         window.sp = function (btn, ok) {
           var r = oSp.apply(this, arguments);
-          try { csr.n++; if (ok) csr.ok++; csrLog(ctx); } catch (e) {}
+          csrMark(ctx, ok);
           return r;
         };
         window.sp.__df = true;
-      }
-      if (typeof window.updateQualityScore === "function" && !window.updateQualityScore.__df) {
-        var oQ = window.updateQualityScore;
-        window.updateQualityScore = function () {
-          var r = oQ.apply(this, arguments);
-          try {
-            var el = document.getElementById("qscore");
-            var m = el ? el.textContent.match(/(\d+)\s*\/\s*(\d+)/) : null;
-            if (m && me()) {
-              var sc = Number(m[1]), tot = Number(m[2]) || 100;
-              DF().logQuiz(ctx.quiz, sc, tot, { page: "csr_fundamentals", source: "quality-form" });
-              if (Math.round(sc / tot * 100) >= passPct()) DF().markModule(ctx.module, true);
-            }
-          } catch (e) {}
-          return r;
-        };
-        window.updateQualityScore.__df = true;
-      }
-      if (typeof window.next === "function" && !window.next.__df) {
-        var oN = window.next;
-        window.next = function () {
-          var r = oN.apply(this, arguments);
-          try {
-            if (me() && typeof cur !== "undefined" && typeof P !== "undefined" && cur >= P.length - 1) {
-              if (csr.n === 0 || Math.round(csr.ok / Math.max(1, csr.n) * 100) >= passPct()) DF().markModule(ctx.module, true);
-            }
-          } catch (e) {}
-          return r;
-        };
-        window.next.__df = true;
       }
     } catch (e) {}
   }
@@ -148,6 +149,12 @@
       if (!me()) return;
       if (document.getElementById("dfTrack")) return;
       var user = me();
+      if (!document.getElementById("dfTrackCss")) {
+        var css = document.createElement("style");
+        css.id = "dfTrackCss";
+        css.textContent = "@media(max-width:640px){#dfTrack{left:12px;right:12px !important;bottom:12px !important;max-width:none !important;padding:10px 12px !important;}#dfTrack .df-hint{display:none;}}";
+        document.head.appendChild(css);
+      }
       var div = document.createElement("div");
       div.id = "dfTrack";
       div.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:99999;background:#050141;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 12px 34px rgba(0,0,0,.3);font-family:Arial,sans-serif;max-width:300px";
@@ -158,12 +165,13 @@
       div.innerHTML =
         '<div style="font-size:12px;font-weight:800;opacity:.8">' + DF().esc(ctx.title.toUpperCase()) + ' • ' + DF().esc(user.name.toUpperCase()) + '</div>' +
         '<div style="font-weight:800;margin:4px 0">' + (done ? '✓ Completed' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
-        '<div style="font-size:12px;opacity:.75">Quiz + activity feed your progress page automatically.</div>' +
+        '<div class="df-hint" style="font-size:12px;opacity:.75">Quiz + activity feed your progress page automatically.</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
         (ctx.module === "m1" || ctx.module === "m2" ? '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' : '') +
         '<a href="' + dash + '" style="border-radius:8px;padding:8px 12px;font-weight:800;background:transparent;color:#fff;border:1px solid #fff;text-decoration:none;font-size:13px">My progress</a>' +
         '</div>';
       document.body.appendChild(div);
+      document.documentElement.style.setProperty("--df-track-h", div.offsetHeight + "px");
       var logBtn = document.getElementById("dfScore");
       if (logBtn) logBtn.onclick = function () {
         var v = prompt("Enter your quiz score 0-100 for " + ctx.quiz + ":");
@@ -177,9 +185,19 @@
     } catch (e) {}
   }
 
+  /* show a newly earned score or Completed flag without a page reload */
+  function refreshWidget(ctx) {
+    DF().reloadState().then(function () {
+      var old = document.getElementById("dfTrack");
+      if (old) old.remove();
+      widget(ctx);
+    }).catch(function () {});
+  }
+
   DF().onReady(function () {
     var ctx = detect();
     if (!ctx) return;
+    document.addEventListener("df:module-read", function (e) { if (e.detail === ctx.module) refreshWidget(ctx); });
     hookGradeQuiz(ctx);
     hookM2(ctx);
     hookCSR(ctx);

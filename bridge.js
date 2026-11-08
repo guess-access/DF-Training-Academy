@@ -218,15 +218,13 @@
       var dash = user.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html";
       div.innerHTML =
         '<div style="font-size:12px;font-weight:800;opacity:.8">' + DF().esc(ctx.title.toUpperCase()) + ' • ' + DF().esc(user.name.toUpperCase()) + '</div>' +
-        '<div style="font-weight:800;margin:4px 0">' + (done ? '✓ Done — recorded' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
+        '<div style="font-weight:800;margin:4px 0">' + (done ? '✓ Completed' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
         '<div style="font-size:12px;opacity:.75">Quiz + activity feed your progress page automatically.</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
-        '<button id="dfDone" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#19c7ff;color:#04222e">' + (done ? 'Mark not done' : 'Mark done') + '</button>' +
         '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' +
         '<a href="' + dash + '" style="border-radius:8px;padding:8px 12px;font-weight:800;background:transparent;color:#fff;border:1px solid #fff;text-decoration:none;font-size:13px">My progress</a>' +
         '</div>';
       document.body.appendChild(div);
-      document.getElementById("dfDone").onclick = function () { DF().markModule(ctx.module, !done); DF().flush().then(function () { location.reload(); }); };
       document.getElementById("dfScore").onclick = function () {
         var v = prompt("Enter your quiz score 0-100 for " + ctx.quiz + ":");
         if (v === null) return;

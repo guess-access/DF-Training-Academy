@@ -25,6 +25,8 @@
   var adapter = null;
   var curKey = null;
   var pill = null, pillTimer = null;
+  var MOD = { "module-01-usa-interactive-training": "m1", "module-02-vehicle101-interactive-training": "m2", "module-03-software-tools": "m3", "csr_fundamentals": "m4", "module-05-certification": "m5", "module-06-refresher-courses": "m6" }[file];
+  var sent = {};             // pageKey -> highest read % the server already has
 
   function loadDone() { try { done = JSON.parse(localStorage.getItem("df_pace_v1_" + uid) || "{}"); } catch (e) { done = {}; } }
   function saveDone() { try { localStorage.setItem("df_pace_v1_" + uid, JSON.stringify(done)); } catch (e) {} }
@@ -45,10 +47,20 @@
     var r = el.getBoundingClientRect();
     if (r.height <= 0) return 0;
     var vis = Math.min(r.height, Math.max(0, clipBottom(el) - r.top));
-    return vis / r.height;
+    var f = vis / r.height;
+    return f >= 0.98 ? 1 : f;
   }
   function key(id) { return file + ":" + id; }
   function isDone(id) { return !!done[key(id)]; }
+  /** How much of the page has really been read, 0..1 (unlike progress(), a page unlocked at 50% does not count as 1). */
+  function raw(id) { var m = mem[key(id)]; return m ? Math.min(m.depth, m.dwell / m.need, 1) : (sent[key(id)] || 0) / 100; }
+  function report(id, force) {
+    if (!MOD) return;
+    var k = key(id), pct = Math.round(raw(id) * 100), had = sent[k] || 0;
+    if (pct <= had || (!force && pct < 100 && pct - had < 10)) return;
+    sent[k] = pct;
+    DFAuth.paceReport({ module: MOD, page: id, pct: pct, total: adapter.total() });
+  }
   function progress(id) { var m = mem[key(id)]; if (!m) return isDone(id) ? 1 : 0; return isDone(id) ? 1 : Math.min(m.depth, m.dwell / m.need, 1); }
 
   /* ---- hint pill (bottom-left) ---- */
@@ -69,24 +81,28 @@
     return pill;
   }
   function showPill(id, flash) {
-    var p = ensurePill(), pr = progress(id), pct = Math.round(pr * 100);
+    var p = ensurePill(), r = raw(id), pct = Math.round(r * 100);
     clearTimeout(pillTimer);
     p.classList.remove("hide");
-    if (isDone(id)) {
-      p.className = "ok"; p.innerHTML = "✓ Page complete. Next is unlocked.";
+    if (r >= 1) {
+      p.className = "ok"; p.innerHTML = "✓ Page complete (100%).";
       pillTimer = setTimeout(function () { p.classList.add("hide"); }, 3500);
-    } else {
-      p.className = "";
-      p.innerHTML = "<div>" + (flash ? "Finish reading this page first. " : "") + "Page progress " + pct + "% • Next unlocks at 50%</div>" +
-        "<div class=\"bar\"><i style=\"width:" + Math.min(100, pr / UNLOCK * 100) + "%\"></i><b></b></div>";
-      if (flash) { p.classList.add("shake"); setTimeout(function () { p.classList.remove("shake"); }, 250); }
+      return;
     }
+    p.className = "";
+    var line = isDone(id) ? "Next is unlocked • Page progress " + pct + "% • Read to 100% to count toward completion" :
+      (flash ? "Finish reading this page first. " : "") + "Page progress " + pct + "% • Next unlocks at 50%";
+    p.innerHTML = "<div>" + line + "</div><div class=\"bar\"><i style=\"width:" + pct + "%\"></i><b></b></div>";
+    if (flash) { p.classList.add("shake"); setTimeout(function () { p.classList.remove("shake"); }, 250); }
   }
 
   /* ---- core ---- */
   function track(id, el) {
     var k = key(id), m = mem[k];
-    if (!m) m = mem[k] = { depth: 0, dwell: 0, need: readSeconds(el) };
+    if (!m) {
+      var need = readSeconds(el), had = (sent[k] || 0) / 100;   // carry on from what the server already recorded
+      m = mem[k] = { depth: had, dwell: need * had, need: need };
+    }
     var d = depthOf(el); if (d > m.depth) m.depth = d;
     return m;
   }
@@ -99,10 +115,10 @@
     if (!isDone(cur.id) && progress(cur.id) >= UNLOCK) { done[key(cur.id)] = true; saveDone(); }
     adapter.paint(cur, isDone(cur.id));
     paintModuleLinks();
-    // keep the hint visible while locked; once complete, say so only once per page
-    if (!isDone(cur.id)) showPill(cur.id, false);
+    report(cur.id, false);
+    // keep the hint visible until the page reaches 100%; then say so once
+    if (raw(cur.id) < 1) { showPill(cur.id, false); wasLocked[key(cur.id)] = true; }
     else if (!announced[key(cur.id)]) { announced[key(cur.id)] = true; if (wasLocked[key(cur.id)]) showPill(cur.id, false); }
-    if (!isDone(cur.id)) wasLocked[key(cur.id)] = true;
   }
   function tick() {
     var cur = adapter.current(); if (!cur) return;
@@ -157,6 +173,7 @@
     });
     return {
       moduleProgress: function () { return shareDone(pages); },
+      total: function () { return pages.length; },
       current: function () { return pages[curIdx()]; },
       el: function (p) { return p.el; },
       paint: function (cur, ok) {
@@ -192,6 +209,7 @@
     };
     return {
       moduleProgress: function () { return shareDone(pages); },
+      total: function () { return pages.length; },
       current: function () { return pages[curIdx()]; },
       el: function (p) { return p.el; },
       paint: function (cur, ok) {
@@ -222,6 +240,7 @@
     };
     return {
       moduleProgress: function () { return shareDone(pages); },
+      total: function () { return pages.length; },
       current: function () { return pages[idx()]; },
       el: function () { return document.getElementById("content"); },
       paint: function (c, ok) {
@@ -242,6 +261,7 @@
       }, true);
     });
     return {
+      total: function () { return 1; },
       current: function () { return page; },
       el: function (p) { return p.el; },
       paint: function (cur, ok) {
@@ -254,6 +274,11 @@
     var me = DFAuth.current();
     if (!me || me.role === "admin") return;   // staff only
     uid = me.id; loadDone();
+    var server = MOD ? (DFAuth.getCompletion() || {})[MOD] : null;
+    if (server) Object.keys(server.pages).forEach(function (id) {   // progress follows the user to any device
+      sent[key(id)] = server.pages[id];
+      if (server.pages[id] >= UNLOCK * 100) done[key(id)] = true;
+    });
     adapter = adapterM1() || adapterM2() || adapterCSR() || adapterSingle();
     if (!adapter) return;
     document.addEventListener("click", function (e) {
@@ -262,6 +287,7 @@
     }, true);
     window.addEventListener("scroll", evaluate, true);
     window.addEventListener("resize", evaluate);
+    window.addEventListener("pagehide", function () { var c = adapter.current(); if (c) report(c.id, true); });
     document.addEventListener("click", function () { setTimeout(evaluate, 60); }, true);
     setInterval(tick, 1000);
     setTimeout(evaluate, 200);

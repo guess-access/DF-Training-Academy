@@ -26,6 +26,7 @@
       progress: { modules: {}, quizzes: {} },
       attempts: [],
       usage: { views: [], logins: [], dwell: {} },
+      completion: {},
       about: { completed: false, videoPct: 0, pageSec: 0, minSec: 300, skips: 0, duration: 0 },
       settings: { passPct: PASS_DEFAULT, aboutGate: false, aboutMinSec: 300 }
     };
@@ -37,6 +38,7 @@
       progress: r.progress || e.progress,
       attempts: r.attempts || e.attempts,
       usage: r.usage || e.usage,
+      completion: r.completion || e.completion,
       about: r.about || e.about,
       settings: r.settings || e.settings
     };
@@ -124,15 +126,8 @@
   }
 
   /* ---- progress ---- */
-  function markModule(id, done) {
-    if (!S.user) return;
-    if (done === undefined) done = true;
-    var has = !!S.progress.modules[id];
-    if (done === has) return; // nothing changed — avoid needless writes
-    if (done) S.progress.modules[id] = { done: true, at: nowISO() };
-    else delete S.progress.modules[id];
-    write("module", { id: id, done: done });
-  }
+  function markModule() { /* Modules are flagged Completed automatically by the server (100% completion + passing score). */ }
+  function paceReport(payload) { if (S.user) write("pace", payload); }
 
   function logQuiz(quizId, score, total, extra) {
     if (!S.user) return null;
@@ -243,6 +238,7 @@
     getUsage: function () { return S.user ? S.usage : null; },
     isCertified: function () { return S.user ? isCertified() : false; },
     getSettings: getSettings, MODULES: MODULES,
+    getCompletion: function () { return S.user ? S.completion : null; }, paceReport: paceReport,
     getAbout: function () { return S.user ? S.about : null; }, gateBlocked: gateBlocked, aboutBeat: aboutBeat,
     // run fn once session + data are loaded; works whether that already happened or not (a late-loading
     // script can miss the one-time "df:ready" event, so pages use this instead of listening for it)

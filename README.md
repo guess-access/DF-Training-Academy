@@ -80,6 +80,14 @@ Staff only; admins are exempt. A "page complete" hint pill shows progress at the
 
 - **Next Module** (`data-df-next-module`): Modules 1, 2 and 4 also have a button to the next module that unlocks when half of that module's lessons are complete.
 
+## Module completion (automatic)
+
+Staff no longer mark modules done. `pace.js` reports how much of each lesson page has been read; the server stores it in
+`module_completion` and works out each module's **Completion Rate** (average of its pages). A module is **Completed** when
+the rate is 100% and its assessment score is at or above the Admin pass mark. Modules 3 and 6 have no assessment, so 100%
+alone completes them. Assessments on Google Forms (Modules 1, 2) reach the site through **Log score** or an admin's Set score.
+Existing databases need the `module_completion` table from `schema.sql`.
+
 ## Notes
 
 - Module 02 and other pages still reference `assets/*.mp4` clips that are not in the repo; add them to `assets/` to enable them.

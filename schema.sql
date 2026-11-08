@@ -76,6 +76,16 @@ CREATE TABLE IF NOT EXISTS login_failures (
   locked_until TEXT
 );
 
+-- Module completion: read percentage per lesson page, as JSON ({"welcome":100,"states":60}).
+CREATE TABLE IF NOT EXISTS module_completion (
+  user_id    TEXT NOT NULL,
+  module_id  TEXT NOT NULL,
+  pages      TEXT NOT NULL DEFAULT '{}',
+  total      INTEGER NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, module_id)
+);
+
 -- About Us gate: server-side record of the team video being played in order at normal speed.
 -- coverage = one character per second of video ('1' = that second was played in order).
 CREATE TABLE IF NOT EXISTS about_progress (

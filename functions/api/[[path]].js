@@ -8,6 +8,8 @@
 const MODULE_IDS = ["m1", "m2", "m3", "m4", "m5", "m6"];
 const QUIZ_IDS = ["quiz_m1_usa", "quiz_m2_vehicle", "quiz_m3_tools", "quiz_m4_csr", "quiz_final", "quiz_m6_refresh"];
 const CORE_MODULES = ["m1", "m2", "m3", "m4"];
+// assessment that decides each module; null = the module has no assessment, so 100% completion alone completes it
+const MODULE_QUIZ = { m1: "quiz_m1_usa", m2: "quiz_m2_vehicle", m3: null, m4: "quiz_m4_csr", m5: "quiz_final", m6: null };
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 100000; // Workers max
 const MIN_PASSWORD = 8;
@@ -67,6 +69,23 @@ async function getPassPct(env) {
   const r = await env.DB.prepare("SELECT value FROM settings WHERE key='passPct'").first();
   const n = r ? Number(r.value) : 80;
   return n >= 1 && n <= 100 ? n : 80;
+}
+
+/** Completion of one module: the average of its lesson pages' read percentages. */
+function completionOf(row) {
+  let pages = {};
+  try { pages = JSON.parse(row.pages || "{}"); } catch (e) {}
+  let sum = 0;
+  Object.keys(pages).forEach((k) => { sum += Math.min(100, Number(pages[k]) || 0); });
+  const total = Math.max(1, row.total || 1);
+  return { pct: Math.min(100, Math.floor(sum / total)), pages, total, at: row.updated_at };
+}
+
+/** A module is Completed automatically: 100% completion AND (no assessment, or assessment at/above the pass mark). */
+function moduleCompleted(moduleId, comp, score, passPct) {
+  if (!comp || comp.pct < 100) return false;
+  if (!MODULE_QUIZ[moduleId]) return true;
+  return score !== undefined && score !== null && score >= passPct;
 }
 
 async function getAboutCfg(env) {
@@ -147,8 +166,9 @@ async function createSession(env, userId, url) {
 
 /** Full per-user state (progress, attempts, usage). Used for the user's own view and the admin's detail view. */
 async function buildUserData(env, userId) {
-  const [mods, quizzes, attempts, views, logins, dwell] = await env.DB.batch([
-    env.DB.prepare("SELECT module_id, at FROM progress WHERE user_id = ?").bind(userId),
+  const passPctNow = await getPassPct(env);
+  const [compRows, quizzes, attempts, views, logins, dwell] = await env.DB.batch([
+    env.DB.prepare("SELECT module_id, pages, total, updated_at FROM module_completion WHERE user_id = ?").bind(userId),
     env.DB.prepare("SELECT quiz_id, score, passed, at, edited_by_admin FROM quizzes WHERE user_id = ?").bind(userId),
     env.DB.prepare("SELECT id, quiz_id, score, raw, total, passed, at, source, extra FROM attempts WHERE user_id = ? ORDER BY at DESC LIMIT 200").bind(userId),
     env.DB.prepare("SELECT page, at FROM usage_events WHERE user_id = ? AND kind='view' ORDER BY id DESC LIMIT 500").bind(userId),
@@ -156,10 +176,15 @@ async function buildUserData(env, userId) {
     env.DB.prepare("SELECT page, SUM(sec) AS sec FROM usage_events WHERE user_id = ? AND kind='dwell' GROUP BY page").bind(userId)
   ]);
   const progress = { modules: {}, quizzes: {} };
-  mods.results.forEach((r) => { progress.modules[r.module_id] = { done: true, at: r.at }; });
   quizzes.results.forEach((r) => {
     progress.quizzes[r.quiz_id] = { score: r.score, passed: !!r.passed, at: r.at };
     if (r.edited_by_admin) progress.quizzes[r.quiz_id].editedByAdmin = true;
+  });
+  const completion = {};
+  compRows.results.forEach((r) => { completion[r.module_id] = completionOf(r); });
+  MODULE_IDS.forEach((m) => {
+    const q = progress.quizzes[MODULE_QUIZ[m]];
+    if (moduleCompleted(m, completion[m], q ? q.score : null, passPctNow)) progress.modules[m] = { done: true, at: completion[m].at };
   });
   const cfgAbout = await getAboutCfg(env);
   const aboutRow = await env.DB.prepare("SELECT coverage, page_sec, duration, violations, completed_at, last_pos, last_playing, ended FROM about_progress WHERE user_id = ?").bind(userId).first();
@@ -178,6 +203,7 @@ async function buildUserData(env, userId) {
       return o;
     }),
     usage,
+    completion,
     about: aboutSummary(aboutRow, cfgAbout)
   };
 }
@@ -295,11 +321,28 @@ async function setModule(req, env, me) {
   const b = await readBody(req);
   if (!b || MODULE_IDS.indexOf(b.id) < 0) return fail("Unknown module.");
   if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
-  if (b.done === false) {
-    await env.DB.prepare("DELETE FROM progress WHERE user_id = ? AND module_id = ?").bind(me.id, b.id).run();
-  } else {
-    await env.DB.prepare("INSERT OR IGNORE INTO progress (user_id, module_id, at) VALUES (?,?,?)").bind(me.id, b.id, nowISO()).run();
-  }
+  // modules are no longer marked by hand: Completed is derived from completion + assessment score
+  return json({ ok: true, ignored: true });
+}
+
+/** A lesson page reports how much of it has been read. The server keeps the highest value per page. */
+async function paceReport(req, env, me) {
+  const b = await readBody(req);
+  if (!b || MODULE_IDS.indexOf(b.module) < 0) return fail("Unknown module.");
+  const page = String(b.page || "");
+  if (!/^[a-zA-Z0-9_-]{1,40}$/.test(page)) return fail("Invalid page.");
+  const pct = Math.round(Number(b.pct));
+  const total = Math.round(Number(b.total));
+  if (!(pct >= 0 && pct <= 100) || !(total >= 1 && total <= 200)) return fail("Invalid progress.");
+  if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
+  const row = await env.DB.prepare("SELECT pages FROM module_completion WHERE user_id = ? AND module_id = ?").bind(me.id, b.module).first();
+  let pages = {};
+  if (row) { try { pages = JSON.parse(row.pages || "{}"); } catch (e) {} }
+  if (pct > (Number(pages[page]) || 0)) pages[page] = pct;
+  await env.DB.prepare(
+    "INSERT INTO module_completion (user_id, module_id, pages, total, updated_at) VALUES (?,?,?,?,?) " +
+    "ON CONFLICT(user_id, module_id) DO UPDATE SET pages = excluded.pages, total = excluded.total, updated_at = excluded.updated_at"
+  ).bind(me.id, b.module, JSON.stringify(pages), total, nowISO()).run();
   await touch(env, me.id);
   return json({ ok: true });
 }
@@ -431,18 +474,24 @@ async function adminUsers(env) {
   const passPct = await getPassPct(env);
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.name, u.email, u.role, u.created_at, u.logins, u.last_active,
-       (SELECT COUNT(*) FROM progress p WHERE p.user_id = u.id) AS mods,
-       (SELECT COUNT(*) FROM progress p WHERE p.user_id = u.id AND p.module_id IN ('m1','m2','m3','m4')) AS core,
        (SELECT COUNT(*) FROM attempts a WHERE a.user_id = u.id) AS attempts,
        (SELECT MAX(score) FROM quizzes q WHERE q.user_id = u.id) AS best,
        (SELECT score FROM quizzes q WHERE q.user_id = u.id AND q.quiz_id = 'quiz_final') AS final,
        (SELECT completed_at FROM about_progress a WHERE a.user_id = u.id) AS about_done
      FROM users u ORDER BY u.created_at`
   ).all();
+  const [cRows, qRows] = await env.DB.batch([
+    env.DB.prepare("SELECT user_id, module_id, pages, total, updated_at FROM module_completion"),
+    env.DB.prepare("SELECT user_id, quiz_id, score FROM quizzes")
+  ]);
+  const comps = {}, scores = {};
+  cRows.results.forEach((c) => { (comps[c.user_id] = comps[c.user_id] || {})[c.module_id] = completionOf(c); });
+  qRows.results.forEach((q) => { (scores[q.user_id] = scores[q.user_id] || {})[q.quiz_id] = q.score; });
+  const doneFor = (uid) => MODULE_IDS.filter((m) => moduleCompleted(m, (comps[uid] || {})[m], (scores[uid] || {})[MODULE_QUIZ[m]], passPct));
   return json(results.map((r) => ({
     id: r.id, name: r.name, email: r.email, role: r.role, createdAt: r.created_at,
-    logins: r.logins, lastActive: r.last_active, modulesDone: r.mods + "/6",
-    attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: r.core === 4 && r.final !== null && r.final >= passPct
+    logins: r.logins, lastActive: r.last_active, modulesDone: doneFor(r.id).length + "/6",
+    attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: CORE_MODULES.every((m) => doneFor(r.id).indexOf(m) >= 0) && r.final !== null && r.final >= passPct
   })));
 }
 
@@ -518,6 +567,7 @@ async function adminAction(action, req, env, me) {
   if (action === "reset") {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id)
     ]);
@@ -538,6 +588,7 @@ async function adminAction(action, req, env, me) {
     if (id === me.id) return fail("Cannot delete yourself.");
     await env.DB.batch([
       env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM usage_events WHERE user_id = ?").bind(id),
@@ -579,6 +630,7 @@ export async function onRequest(context) {
     if (!me) return fail("Not signed in.", 401);
 
     if (method === "POST" && route === "module") return await setModule(request, env, me);
+    if (method === "POST" && route === "pace") return await paceReport(request, env, me);
     if (method === "POST" && route === "quiz") return await logQuiz(request, env, me);
     if (method === "POST" && route === "usage") return await logUsage(request, env, me);
     if (method === "POST" && route === "about/beat") return await aboutBeat(request, env, me);

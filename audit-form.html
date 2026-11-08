@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Module 06 — Call Audit Form | Dealerfocus Training Academy</title>
+<style>
+  :root{
+    --primary:#050141;
+    --primary-deep:#011441;
+    --accent:#d97757;
+    --accent-light:#f5d5c8;
+    --success:#10b981;
+    --text-primary:#1f2937;
+    --text-secondary:#6b7280;
+    --bg-light:#f9fafb;
+    --bg-white:#ffffff;
+    --border:#e5e7eb;
+    --focus:#3b82f6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background:linear-gradient(135deg, #f9fafb 0%, #f0f4f8 100%);
+    color:var(--text-primary);
+    min-height:100vh;
+    padding:2.5rem 1.5rem 4rem;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  .header{
+    background:var(--primary);
+    color:#fff;
+    border-radius:14px;
+    padding:2rem 2.25rem;
+    margin-bottom:1.5rem;
+  }
+  .header .eyebrow{
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    opacity:.7;
+    margin-bottom:.5rem;
+  }
+  .header h1{font-size:1.6rem;font-weight:700;margin-bottom:.5rem;}
+  .header p{font-size:.95rem;opacity:.85;line-height:1.5;}
+
+  .card{
+    background:var(--bg-white);
+    border-radius:12px;
+    padding:2rem;
+    margin-bottom:1.5rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+    border:1px solid var(--border);
+  }
+  .card h2{font-size:1.05rem;color:var(--primary);margin-bottom:1.25rem;}
+  .card h2 .step{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:24px;height:24px;background:var(--accent);color:#fff;
+    border-radius:50%;font-size:.75rem;font-weight:700;margin-right:.6rem;
+  }
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+  .field{margin-bottom:1.1rem;}
+  .grid .field{margin-bottom:0;}
+  label{display:block;font-size:.85rem;font-weight:600;color:var(--primary);margin-bottom:.4rem;}
+  .hint{font-size:.8rem;color:var(--text-secondary);margin-top:.35rem;}
+
+  input[type="text"], input[type="date"], textarea, select{
+    width:100%;
+    padding:.75rem 1rem;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:.9rem;
+    font-family:inherit;
+    background:#fff;
+    color:var(--text-primary);
+  }
+  textarea{min-height:100px;resize:vertical;}
+  input:focus, textarea:focus, select:focus{
+    outline:none;border-color:var(--focus);
+    box-shadow:0 0 0 3px rgba(59,130,246,.1);
+  }
+
+  .score-items{display:flex;flex-direction:column;gap:.9rem;}
+  .score-item{
+    display:grid;grid-template-columns:1fr auto;align-items:center;
+    padding:1rem;background:var(--bg-light);border-radius:8px;
+    border-left:4px solid var(--border);
+  }
+  .score-label{font-weight:600;color:var(--primary);font-size:.92rem;}
+  .score-input{display:flex;align-items:center;gap:.6rem;}
+  .score-input input{width:60px;text-align:center;font-weight:700;padding:.5rem;}
+  .score-max{color:var(--text-secondary);font-size:.85rem;}
+  .score-input select{
+    min-width:190px;
+    padding:.55rem .7rem;
+    border:2px solid var(--border);
+    border-radius:6px;
+    font-size:.88rem;
+    font-weight:600;
+    color:var(--primary);
+    background:#fff;
+    font-family:inherit;
+  }
+  .score-input select:focus{
+    outline:none;border-color:var(--focus);
+    box-shadow:0 0 0 3px rgba(59,130,246,.1);
+  }
+  .score-legend{
+    margin-top:1.25rem;
+    padding:1rem 1.25rem;
+    background:var(--bg-light);
+    border-radius:8px;
+  }
+  .score-legend p{font-size:.82rem;color:var(--text-secondary);line-height:1.6;}
+  .score-result{
+    display:none;
+    margin-top:1rem;
+    padding:1rem 1.25rem;
+    border-radius:8px;
+    font-size:1.15rem;
+    font-weight:700;
+    text-align:center;
+  }
+  .score-result.pass{display:block;color:#0a7a34;background:#e8f5e9;border-left:4px solid #0a7a34;}
+  .score-result.fail{display:block;color:#c81e1e;background:#fdecea;border-left:4px solid #c81e1e;}
+  .score-result .reaudit-note{
+    display:block;
+    margin-top:.4rem;
+    font-size:.82rem;
+    font-weight:500;
+    color:inherit;
+  }
+  @media (max-width:480px){
+    .score-item{grid-template-columns:1fr;gap:.6rem;}
+    .score-input select{width:100%;min-width:0;}
+  }
+  .total-score{
+    display:flex;align-items:baseline;gap:.5rem;
+    padding-top:1rem;margin-top:.5rem;border-top:2px solid var(--border);
+    font-size:1.1rem;font-weight:700;color:var(--primary);
+  }
+
+  .radio-row{display:flex;gap:1.5rem;margin-top:.4rem;}
+  .radio-option{display:flex;align-items:center;gap:.5rem;font-size:.9rem;color:var(--text-primary);}
+  .radio-option input{width:auto;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:.9rem 1.8rem;background:var(--primary);color:#fff;border:none;
+    border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;
+    transition:all .2s;width:100%;
+  }
+  .btn:hover{background:var(--primary-deep);}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+
+  #formStatus{
+    display:none;margin-top:1.25rem;padding:1rem 1.25rem;border-radius:8px;
+    font-size:.9rem;line-height:1.5;
+  }
+  #formStatus.success{display:block;background:#e8f5e9;color:#1b5e20;border-left:4px solid var(--success);}
+  #formStatus.error{display:block;background:#fdecea;color:#a12f26;border-left:4px solid #e5544a;}
+  #formStatus.sending{display:block;background:var(--bg-light);color:var(--text-secondary);border-left:4px solid var(--border);}
+
+  @media (max-width:640px){
+    .grid{grid-template-columns:1fr;}
+    body{padding:1.5rem 1rem 3rem;}
+    .header{padding:1.5rem;}
+  }
+</style>
+<script src="auth.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <h1>Call Audit Form</h1>
+    <p>Completed together by the Agent, Team Lead, and Trainer after the agent's live call following this refresher. Submitting this form logs the audit.</p>
+  </div>
+
+  <form id="auditForm">
+
+    <div class="card">
+      <h2><span class="step">1</span>Session Details</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="agentName">Agent Name</label>
+          <input type="text" id="agentName" name="agentName" required>
+        </div>
+        <div class="field">
+          <label for="teamLeadName">Team Lead Name</label>
+          <input type="text" id="teamLeadName" name="teamLeadName" required>
+        </div>
+        <div class="field">
+          <label for="trainerName">Trainer Name</label>
+          <input type="text" id="trainerName" name="trainerName" required>
+        </div>
+        <div class="field">
+          <label for="auditDate">Date of Audit Meeting</label>
+          <input type="date" id="auditDate" name="auditDate" required>
+        </div>
+      </div>
+
+      <h3 style="font-size:0.95rem;color:var(--primary);margin:1.5rem 0 1.25rem;font-weight:700;"><strong>Call Details</strong></h3>
+
+      <div class="grid">
+        <div class="field">
+          <label for="callDate">Call Date & Time</label>
+          <input type="text" id="callDate" name="callDate" placeholder="MM/DD/YYYY HH:MM" required>
+        </div>
+        <div class="field">
+          <label for="callReference">Call Link</label>
+          <input type="text" id="callReference" name="callReference">
+        </div>
+        <div class="field">
+          <label for="dealershipName">Dealership Name</label>
+          <input type="text" id="dealershipName" name="dealershipName">
+        </div>
+        <div class="field">
+          <label for="customerRef">Customer Name</label>
+          <input type="text" id="customerRef" name="customerRef">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">2</span>Call Scorecard</h2>
+      <p class="hint" style="margin-bottom:1rem;">Each item is scored 0–3: <strong>3</strong> Meets Standard, <strong>2</strong> Partially Meets, <strong>1</strong> Needs Improvement, <strong>0</strong> Does Not Meet.</p>
+      <div class="score-items">
+        <div class="score-item">
+          <span class="score-label">Identified customer's true need</span>
+          <div class="score-input">
+            <select id="score1" name="score1" required onchange="calcTotal()">
+              <option value="" disabled selected>Select score</option>
+              <option value="3">3 – Meets Standard</option>
+              <option value="2">2 – Partially Meets</option>
+              <option value="1">1 – Needs Improvement</option>
+              <option value="0">0 – Does Not Meet</option>
+            </select>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-label">Active listening</span>
+          <div class="score-input">
+            <select id="score2" name="score2" required onchange="calcTotal()">
+              <option value="" disabled selected>Select score</option>
+              <option value="3">3 – Meets Standard</option>
+              <option value="2">2 – Partially Meets</option>
+              <option value="1">1 – Needs Improvement</option>
+              <option value="0">0 – Does Not Meet</option>
+            </select>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-label">Appropriate empathy</span>
+          <div class="score-input">
+            <select id="score3" name="score3" required onchange="calcTotal()">
+              <option value="" disabled selected>Select score</option>
+              <option value="3">3 – Meets Standard</option>
+              <option value="2">2 – Partially Meets</option>
+              <option value="1">1 – Needs Improvement</option>
+              <option value="0">0 – Does Not Meet</option>
+            </select>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-label">Correct action / resolution</span>
+          <div class="score-input">
+            <select id="score4" name="score4" required onchange="calcTotal()">
+              <option value="" disabled selected>Select score</option>
+              <option value="3">3 – Meets Standard</option>
+              <option value="2">2 – Partially Meets</option>
+              <option value="1">1 – Needs Improvement</option>
+              <option value="0">0 – Does Not Meet</option>
+            </select>
+          </div>
+        </div>
+        <div class="score-item">
+          <span class="score-label">Professional wording &amp; call control</span>
+          <div class="score-input">
+            <select id="score5" name="score5" required onchange="calcTotal()">
+              <option value="" disabled selected>Select score</option>
+              <option value="3">3 – Meets Standard</option>
+              <option value="2">2 – Partially Meets</option>
+              <option value="1">1 – Needs Improvement</option>
+              <option value="0">0 – Does Not Meet</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="score-legend">
+        <p><strong>3 – Meets Standard:</strong> Fully correct / process followed</p>
+        <p><strong>2 – Partially Meets:</strong> Minor error or missed step</p>
+        <p><strong>1 – Needs Improvement:</strong> Significant error</p>
+        <p><strong>0 – Does Not Meet:</strong> Incorrect or process not followed</p>
+        <p style="margin-top:.6rem;"><strong>Passing score: 13+ out of 15.</strong> A score of 12 or below means the agent must take another live call for reaudit, and repeat until a passing score is reached.</p>
+      </div>
+      <div class="total-score">Final Score: <span id="scoreTotal">0</span> / 15</div>
+      <div id="scoreResult" class="score-result"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">3</span>Coaching Notes</h2>
+      <div class="field">
+        <label for="strengths">What did the agent do well?</label>
+        <textarea id="strengths" name="strengths"></textarea>
+      </div>
+      <div class="field" style="margin-top:1.1rem;">
+        <label for="improvements">What should the agent focus on improving?</label>
+        <textarea id="improvements" name="improvements"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">4</span>Follow-Up</h2>
+      <div class="field">
+        <label>Is a follow-up coaching session required?</label>
+        <div class="radio-row">
+          <label class="radio-option"><input type="radio" name="followUpRequired" value="Yes" required> Yes</label>
+          <label class="radio-option"><input type="radio" name="followUpRequired" value="No" required> No</label>
+        </div>
+      </div>
+      <div class="field" style="margin-top:1.1rem;">
+        <label for="followUpNotes">Follow-up notes / action items</label>
+        <textarea id="followUpNotes" name="followUpNotes"></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="btn" id="submitBtn">Submit Audit</button>
+    <div id="formStatus"></div>
+
+  </form>
+</div>
+
+<script>
+  // ------------------------------------------------------------------
+  // PASTE YOUR ZAPIER "CATCH HOOK" WEBHOOK URL BELOW.
+  // In Zapier: create a Zap → Trigger app "Webhooks by Zapier" →
+  // Event "Catch Hook" → copy the custom webhook URL it gives you → paste here.
+  // ------------------------------------------------------------------
+  const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/27280070/4dt03r2/";
+
+  function calcTotal() {
+    let total = 0;
+    let allSelected = true;
+    for (let i = 1; i <= 5; i++) {
+      const val = document.getElementById('score' + i).value;
+      if (val === '') allSelected = false;
+      total += parseInt(val) || 0;
+    }
+    document.getElementById('scoreTotal').textContent = total;
+
+    const resultBox = document.getElementById('scoreResult');
+    if (!allSelected) {
+      resultBox.className = 'score-result';
+      resultBox.innerHTML = '';
+      return;
+    }
+    if (total >= 13) {
+      resultBox.className = 'score-result pass';
+      resultBox.innerHTML = 'Passed!';
+    } else {
+      resultBox.className = 'score-result fail';
+      resultBox.innerHTML = 'Retry Again!<span class="reaudit-note">The agent must complete another live call for reaudit until a passing score is reached.</span>';
+    }
+  }
+
+  function getAuditResult() {
+    const total = parseInt(document.getElementById('scoreTotal').textContent) || 0;
+    return total >= 13 ? 'Passed' : 'Retry Again';
+  }
+
+  const form = document.getElementById('auditForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusBox = document.getElementById('formStatus');
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    if (!ZAPIER_WEBHOOK_URL || ZAPIER_WEBHOOK_URL.indexOf('PASTE_YOUR') === 0) {
+      statusBox.className = 'error';
+      statusBox.textContent = 'This form is not connected to Zapier yet. Add your Webhook URL in the ZAPIER_WEBHOOK_URL variable near the bottom of this file.';
+      return;
+    }
+
+    const payload = {
+      module: 'Module 06: Refresher Courses',
+      formType: 'Call Audit Form',
+      submittedAt: new Date().toISOString(),
+      agentName: document.getElementById('agentName').value.trim(),
+      teamLeadName: document.getElementById('teamLeadName').value.trim(),
+      trainerName: document.getElementById('trainerName').value.trim(),
+      auditDate: document.getElementById('auditDate').value,
+      callDate: document.getElementById('callDate').value,
+      callReference: document.getElementById('callReference').value.trim(),
+      dealershipName: document.getElementById('dealershipName').value.trim(),
+      customerRef: document.getElementById('customerRef').value.trim(),
+      scores: {
+        identifiedTrueNeed: parseInt(document.getElementById('score1').value) || 0,
+        activeListening: parseInt(document.getElementById('score2').value) || 0,
+        appropriateEmpathy: parseInt(document.getElementById('score3').value) || 0,
+        correctActionResolution: parseInt(document.getElementById('score4').value) || 0,
+        professionalWordingCallControl: parseInt(document.getElementById('score5').value) || 0,
+      },
+      totalScore: parseInt(document.getElementById('scoreTotal').textContent) || 0,
+      auditResult: getAuditResult(),
+      strengths: document.getElementById('strengths').value.trim(),
+      improvements: document.getElementById('improvements').value.trim(),
+      followUpRequired: (form.querySelector('input[name="followUpRequired"]:checked') || {}).value || '',
+      followUpNotes: document.getElementById('followUpNotes').value.trim(),
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    statusBox.className = 'sending';
+    statusBox.textContent = 'Sending audit to Zapier...';
+
+    try {
+      await fetch(ZAPIER_WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      // 'no-cors' mode means we can't read the response, so a successful
+      // fetch (no thrown error) is treated as a successful hand-off to Zapier.
+      statusBox.className = 'success';
+      statusBox.textContent = 'Audit submitted. You can close this form.';
+      form.reset();
+      document.getElementById('scoreTotal').textContent = '0';
+      document.getElementById('scoreResult').className = 'score-result';
+      document.getElementById('scoreResult').innerHTML = '';
+    } catch (err) {
+      statusBox.className = 'error';
+      statusBox.textContent = 'Something went wrong sending this to Zapier. Please check your connection and try again.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Audit';
+    }
+  });
+</script>
+</body>
+</html>

@@ -62,6 +62,21 @@ Skip/fast-forward attempts are counted and shown to admins.
   admin should reset About Us progress (the server restarts coverage automatically when the duration differs by
   more than 2 seconds).
 
+## Module pacing: Next unlocks at 50% (`pace.js`)
+
+Inside a module, a Next / forward move stays locked until the **current page is at least 50% complete**. Completion is the
+smaller of (a) how far down the page the learner has scrolled and (b) time on the page vs. its estimated reading time
+(about 220 words/min, tab visible), so scrolling to the bottom in a second does not unlock it. Backward moves are free.
+Staff only; admins are exempt. A "page complete" hint pill shows progress at the bottom-left.
+
+- Covers Module 1 (Start Training + sidebar jumps + Assessment link), Module 2 (tabs) and Module 4 / CSR fundamentals
+  (Next/Finish + section menu). Add `<script src="pace.js"></script>` after `bridge.js` to cover another interactive page
+  (it needs an adapter in `pace.js` for that page's navigation).
+- Module 3 embeds an outside site (onizoa.github.io), Module 5 is an assessment, and Module 6 embeds `training-1.html`,
+  which is not in the repo, so they have no Next button to pace here.
+- Finished pages are remembered per user in the browser (`localStorage`); this is a pacing aid in the page, not a server
+  check like the About Us video.
+
 ## Notes
 
 - Module 02 and other pages still reference `assets/*.mp4` clips that are not in the repo; add them to `assets/` to enable them.

@@ -5,7 +5,13 @@
 <title>Login — Dealerfocus Training Academy</title>
 <link rel="stylesheet" href="style.css"><script src="auth.js"></script>
 <style>
-.auth-wrap{max-width:460px;margin:48px auto;padding:0 20px}
+body{min-height:100vh;display:flex;flex-direction:column}
+.auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%;max-width:460px;margin:0 auto;padding:40px 20px;box-sizing:content-box}
+.auth-card{width:100%}
+.auth-logo{display:flex;justify-content:center;margin-bottom:18px}
+.auth-logo img{height:72px;width:auto;margin:0 auto}
+.auth-card h1,.auth-card p.sub{text-align:center}
+.site-footer{justify-content:center;text-align:center}
 .auth-card{background:#fff;border:1px solid #dfe4ee;border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(10,30,70,.08)}
 .auth-card h1{margin:0 0 6px;font-size:24px;color:#050141}
 .auth-card p.sub{margin:0 0 18px;color:#667085;font-size:14px}
@@ -22,12 +28,11 @@
 </style>
 </head>
 <body>
-<header class="site-header sec-nav"><a class="brand" href="/"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"><span>Dealerfocus Training Academy</span></a><nav class="site-nav"><a href="/">Home</a><a href="/modules">Modules</a><a href="/sandbox">Sandbox</a><a href="/about-us">About Us</a></nav></header>
 <main class="auth-wrap">
 <div class="auth-card">
-<div style="text-align:center;margin-bottom:14px"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo" style="height:64px;width:auto"></div>
-<h1 class="sec-headings" style="text-align:center">Welcome back</h1>
-<p class="sub">Log in to track your progress and scores.</p>
+<div class="auth-logo"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"></div>
+<h1 class="sec-headings">Welcome Trainees</h1>
+<p class="sub">Login to your portal</p>
 <div id="fLogin">
 <label>Email</label><input id="liEmail" type="email" placeholder="you@company.com" autocomplete="username">
 <label>Password</label><input id="liPass" type="password" placeholder="••••••••" autocomplete="current-password">

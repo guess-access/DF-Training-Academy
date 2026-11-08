@@ -86,7 +86,21 @@
 
     function msg(t, kind) { msgEl.textContent = t || ""; msgEl.className = "at-msg" + (kind ? " " + kind : ""); }
 
+    function paintNext() {
+      var open = !DFAuth.gateBlocked();
+      nextEl.classList.toggle("locked", !open);
+      nextEl.setAttribute("aria-disabled", open ? "false" : "true");
+      return open;
+    }
+    var wasOpen = paintNext();
+    nextEl.addEventListener("click", function (e) {
+      if (!paintNext()) { e.preventDefault(); msg("The Next button unlocks at 50% of the video. You are at " + videoPct + "%.", "warn"); }
+    });
+
     function render() {
+      var open = paintNext();
+      if (open && !wasOpen && !completed) msg("You have reached 50%. Next is unlocked and will take you to Module 1. Keep watching to finish About Us.", "ok");
+      wasOpen = open;
       var pageSec = serverPageSec;
       if (!completed && beatAt && document.visibilityState === "visible") pageSec += Math.min(20, (Date.now() - beatAt) / 1000);
       var vp = completed ? 100 : videoPct;
@@ -97,11 +111,10 @@
       timeBarTxt.textContent = fmt(Math.min(pageSec, minSec)) + " / " + fmt(minSec);
       if (completed) {
         statusEl.textContent = "Complete ✓"; statusEl.className = "at-badge done";
-        nextEl.style.display = "inline-flex";
       } else if (failed) {
         statusEl.textContent = "Video unavailable"; statusEl.className = "at-badge warn";
       } else {
-        statusEl.textContent = gateOn ? "Required" : "In progress"; statusEl.className = "at-badge";
+        statusEl.textContent = gateOn && DFAuth.gateBlocked() ? "Required" : "In progress"; statusEl.className = "at-badge";
       }
       if (ready && v.duration) {
         fill.style.width = Math.min(100, v.currentTime / v.duration * 100) + "%";
@@ -192,7 +205,7 @@
     setInterval(render, 1000);
 
     if (completed) done();
-    else if (gateOn) msg("Watch the whole video, then keep this page open until the time bar is full.", "");
+    else if (gateOn) msg(DFAuth.gateBlocked() ? "The Next button unlocks at 50% of the video." : "Next is unlocked. Keep watching to finish About Us.", "");
     render();
     if (v.readyState >= 1) { ready = true; resume(); render(); beat(); }
     if (v.error) unavailable();

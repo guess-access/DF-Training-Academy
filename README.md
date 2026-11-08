@@ -52,7 +52,7 @@ video must finish), and time on the page accrues only while the tab is visible (
 Skip/fast-forward attempts are counted and shown to admins.
 
 - **Admin dashboard > About Us gate**: turn the gate on/off and set the minimum minutes. While ON, staff can open only Home,
-  About Us and My Progress, and the API refuses to record module progress or quiz scores until About Us is complete.
+  About Us and My Progress, and the API refuses to record module progress or quiz scores, until at least 50% of the video is watched. At 50% the Next button on About Us opens Module 1. Full completion (97% of the video + minimum time) is still recorded separately.
   Admins are exempt. The gate is OFF by default so a missing video can never lock everyone out.
 - Per user: an admin can see About Us status and reset it (**View / edit > Reset About Us**).
 - Existing databases need the `about_progress` table and the two settings rows from `schema.sql`.
@@ -77,6 +77,8 @@ Staff only; admins are exempt. A "page complete" hint pill shows progress at the
   `training-1.html`, which is not in the repo, so activity inside those cannot be measured.
 - Finished pages are remembered per user in the browser (`localStorage`); this is a pacing aid in the page, not a server
   check like the About Us video.
+
+- **Next Module** (`data-df-next-module`): Modules 1, 2 and 4 also have a button to the next module that unlocks when half of that module's lessons are complete.
 
 ## Notes
 

@@ -196,9 +196,9 @@
     if (gateBlocked() && ["index", "about-us", "user-dashboard"].indexOf(file) < 0) { location.href = "about-us.html"; return; }
   }
 
-  /** True when the About Us gate is on, the user is staff, and they have not completed About Us yet. */
+  /** True when the About Us gate is on, the user is staff, and they have not yet watched 50% of the About Us video. */
   function gateBlocked() {
-    return !!(S.user && S.user.role === "user" && S.settings.aboutGate && !(S.about && S.about.completed));
+    return !!(S.user && S.user.role === "user" && S.settings.aboutGate && !(S.about && (S.about.completed || S.about.unlocked)));
   }
 
   /** About Us heartbeat (video position + visibility). The server decides what counts; see functions/api. */

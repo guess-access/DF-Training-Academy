@@ -43,7 +43,7 @@ DFAuth.onReady(function(){
   var p=DFAuth.getProgress(), at=DFAuth.getAttempts(), us=DFAuth.getUsage(), set=DFAuth.getSettings();
   var mods=set.modules||DFAuth.MODULES;
   var ab=DFAuth.getAbout()||{};
-  document.getElementById('aboutRow').innerHTML='<div class="modrow"><div><b>About Us — team video &amp; time on page</b><div style="font-size:13px;color:#667085">'+(ab.completed?'Completed '+new Date(ab.completedAt).toLocaleString():'Video watched: '+(ab.videoPct||0)+'% • Time on page: '+Math.floor((ab.pageSec||0)/60)+'m of '+Math.round((ab.minSec||300)/60)+' min')+(set.aboutGate&&!ab.completed&&me.role==='user'?' • Modules unlock after this step':'')+'</div></div><div>'+(ab.completed?'<span class="badge pass">Done</span>':'<a class="btn" style="text-decoration:none" href="about-us.html">Open</a>')+'</div></div>';
+  document.getElementById('aboutRow').innerHTML='<div class="modrow"><div><b>About Us — team video &amp; time on page</b><div style="font-size:13px;color:#667085">'+(ab.completed?'Completed '+new Date(ab.completedAt).toLocaleString():'Video watched: '+(ab.videoPct||0)+'% • Time on page: '+Math.floor((ab.pageSec||0)/60)+'m of '+Math.round((ab.minSec||300)/60)+' min')+(set.aboutGate&&!ab.completed&&me.role==='user'?' • Modules unlock at 50% of the video':'')+'</div></div><div>'+(ab.completed?'<span class="badge pass">Done</span>':'<a class="btn" style="text-decoration:none" href="about-us.html">Open</a>')+'</div></div>';
   var done=mods.filter(function(m){return p.modules&&p.modules[m.id];}).length;
   document.getElementById('sMod').textContent=done+'/'+mods.length;
   document.getElementById('sModBar').style.width=Math.round(done/mods.length*100)+'%';

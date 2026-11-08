@@ -98,6 +98,7 @@
     if (curKey !== key(cur.id)) { curKey = key(cur.id); m.need = readSeconds(el); }
     if (!isDone(cur.id) && progress(cur.id) >= UNLOCK) { done[key(cur.id)] = true; saveDone(); }
     adapter.paint(cur, isDone(cur.id));
+    paintModuleLinks();
     // keep the hint visible while locked; once complete, say so only once per page
     if (!isDone(cur.id)) showPill(cur.id, false);
     else if (!announced[key(cur.id)]) { announced[key(cur.id)] = true; if (wasLocked[key(cur.id)]) showPill(cur.id, false); }
@@ -117,6 +118,22 @@
     return true;
   }
   function blocked(id) { showPill(id, true); }
+  /** Share of this module's lessons that are complete: "Next Module" unlocks at 50%. */
+  function shareDone(pages) { var n = 0; pages.forEach(function (p) { if (isDone(p.id)) n++; }); return pages.length ? n / pages.length : 0; }
+  function paintModuleLinks() {
+    if (!adapter || !adapter.moduleProgress) return;
+    var open = adapter.moduleProgress() >= UNLOCK;
+    [].slice.call(document.querySelectorAll("[data-df-next-module]")).forEach(function (b) {
+      b.classList.toggle("df-locked", !open); b.setAttribute("aria-disabled", open ? "false" : "true");
+    });
+  }
+  function blockedModule() {
+    var p = ensurePill(); clearTimeout(pillTimer);
+    p.className = "shake";
+    p.textContent = "Next Module unlocks at 50% of this module. You are at " + Math.round(adapter.moduleProgress() * 100) + "%.";
+    setTimeout(function () { p.classList.remove("shake"); }, 250);
+    pillTimer = setTimeout(function () { p.classList.add("hide"); }, 4000);
+  }
 
   /* ---- adapters ---- */
   function adapterM1() { // Module 1 interactive: sections .page, sidebar .nav-btn, "Start Training" in .actions
@@ -132,13 +149,14 @@
       return orig.apply(this, arguments);
     };
     // the Assessment link is an <a> that opens a form: treat it as "after the last lesson"
-    [].slice.call(document.querySelectorAll(".sidebar a.nav-btn, .actions a.btn")).forEach(function (n) {
+    [].slice.call(document.querySelectorAll(".sidebar a.nav-btn, .actions a.btn:not([data-df-next-module])")).forEach(function (n) {
       n.addEventListener("click", function (e) {
         var from = curIdx();
         if (!allowForward(pages, from, pages.length)) { e.preventDefault(); e.stopPropagation(); blocked(pages[from].id); }
       }, true);
     });
     return {
+      moduleProgress: function () { return shareDone(pages); },
       current: function () { return pages[curIdx()]; },
       el: function (p) { return p.el; },
       paint: function (cur, ok) {
@@ -147,7 +165,7 @@
           var lock = !allowForward(pages, from, i > pages.length - 1 ? pages.length : i) && i > from;
           n.classList.toggle("df-locked", lock); n.setAttribute("aria-disabled", lock ? "true" : "false");
         });
-        [].slice.call(cur.el.querySelectorAll(".actions .btn")).forEach(function (b) {
+        [].slice.call(cur.el.querySelectorAll(".actions .btn:not([data-df-next-module])")).forEach(function (b) {
           b.classList.toggle("df-locked", !ok); b.setAttribute("aria-disabled", ok ? "false" : "true");
         });
       }
@@ -157,7 +175,7 @@
     if (typeof window.showTab !== "function" || !document.querySelector(".tab-btn")) return null;
     var pages = [].slice.call(document.querySelectorAll(".tab-content")).map(function (p) { return { id: p.id, el: p }; });
     var btns = [].slice.call(document.querySelectorAll(".tab-btn"));
-    var links = [].slice.call(document.querySelectorAll("a.assessment-btn, .tab-next a"));
+    var links = [].slice.call(document.querySelectorAll("a.assessment-btn, .tab-next a:not([data-df-next-module])"));
     links.forEach(function (n) {
       n.addEventListener("click", function (e) {
         var from = curIdx();
@@ -173,6 +191,7 @@
       return orig.apply(this, arguments);
     };
     return {
+      moduleProgress: function () { return shareDone(pages); },
       current: function () { return pages[curIdx()]; },
       el: function (p) { return p.el; },
       paint: function (cur, ok) {
@@ -202,6 +221,7 @@
       return origGo.apply(this, arguments);
     };
     return {
+      moduleProgress: function () { return shareDone(pages); },
       current: function () { return pages[idx()]; },
       el: function () { return document.getElementById("content"); },
       paint: function (c, ok) {
@@ -236,6 +256,10 @@
     uid = me.id; loadDone();
     adapter = adapterM1() || adapterM2() || adapterCSR() || adapterSingle();
     if (!adapter) return;
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest("[data-df-next-module]");
+      if (a && adapter.moduleProgress && adapter.moduleProgress() < UNLOCK) { e.preventDefault(); e.stopPropagation(); blockedModule(); }
+    }, true);
     window.addEventListener("scroll", evaluate, true);
     window.addEventListener("resize", evaluate);
     document.addEventListener("click", function () { setTimeout(evaluate, 60); }, true);

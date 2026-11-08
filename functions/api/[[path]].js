@@ -13,6 +13,7 @@ const PBKDF2_ITER = 100000; // Workers max
 const MIN_PASSWORD = 8;
 // About Us gate: the team video must be watched in order at normal speed; time on the page is also required.
 const ABOUT_MAX_DURATION = 3600;   // seconds; longer videos are refused
+const ABOUT_UNLOCK_PCT = 50;       // staff may move on to the Modules once this much of the video is watched in order
 const ABOUT_COVER_NEED = 0.97;     // share of the video that must have been played in order
 const BEAT_MAX_WALL = 20;          // time-on-page: a heartbeat gap longer than this adds no page time
 const COVER_MAX_WALL = 120;        // video credit: playback is capped by real elapsed time, so longer gaps are safe
@@ -93,8 +94,10 @@ function aboutSummary(row, cfg) {
     // rewind a little only if they left mid-playback; if they had paused, resume exactly there
     resumePos = Math.max(0, Math.floor(row.last_pos) - (row.last_playing ? 3 : 0));
   }
+  const videoPctNow = n ? Math.min(100, Math.floor((covered / n) * 100)) : 0;
   return {
     resumePos,
+    unlocked: !!(row && row.completed_at) || videoPctNow >= ABOUT_UNLOCK_PCT,
     completed: !!(row && row.completed_at),
     completedAt: row && row.completed_at ? row.completed_at : null,
     videoPct: n ? Math.min(100, Math.floor((covered / n) * 100)) : 0,
@@ -105,17 +108,20 @@ function aboutSummary(row, cfg) {
   };
 }
 
-async function aboutDone(env, userId) {
-  const r = await env.DB.prepare("SELECT completed_at FROM about_progress WHERE user_id = ?").bind(userId).first();
-  return !!(r && r.completed_at);
+async function aboutUnlocked(env, userId) {
+  const r = await env.DB.prepare("SELECT coverage, duration, completed_at FROM about_progress WHERE user_id = ?").bind(userId).first();
+  if (!r) return false;
+  if (r.completed_at) return true;
+  const n = Math.ceil(r.duration || 0);
+  return n > 0 && (countOnes(r.coverage || "") / n) * 100 >= ABOUT_UNLOCK_PCT;
 }
 
-/** Staff cannot record module progress or quiz scores until About Us is complete (when the gate is on). */
+/** Staff cannot record module progress or quiz scores until 50% of the About Us video is watched (when the gate is on). */
 async function gateBlocks(env, me) {
   if (me.role === "admin") return false;
   const cfg = await getAboutCfg(env);
   if (!cfg.gate) return false;
-  return !(await aboutDone(env, me.id));
+  return !(await aboutUnlocked(env, me.id));
 }
 
 async function currentUser(req, env) {
@@ -288,7 +294,7 @@ async function touch(env, userId) {
 async function setModule(req, env, me) {
   const b = await readBody(req);
   if (!b || MODULE_IDS.indexOf(b.id) < 0) return fail("Unknown module.");
-  if (await gateBlocks(env, me)) return fail("Complete the About Us video first.", 403);
+  if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
   if (b.done === false) {
     await env.DB.prepare("DELETE FROM progress WHERE user_id = ? AND module_id = ?").bind(me.id, b.id).run();
   } else {
@@ -316,7 +322,7 @@ async function upsertQuiz(env, userId, quiz, pct, passPct, t, edited) {
 async function logQuiz(req, env, me) {
   const b = await readBody(req);
   if (!b || QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
-  if (await gateBlocks(env, me)) return fail("Complete the About Us video first.", 403);
+  if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
   const total = Number(b.total) > 0 ? Math.min(Number(b.total), 1000) : 100;
   const raw = Number(b.raw);
   if (!(raw >= 0) || raw > total) return fail("Invalid score.");

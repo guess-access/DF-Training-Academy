@@ -27,35 +27,24 @@
 <div class="auth-card">
 <div style="text-align:center;margin-bottom:14px"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo" style="height:64px;width:auto"></div>
 <h1 class="sec-headings" style="text-align:center">Welcome back</h1>
-<p class="sub">Log in to track your progress and scores. Admins get full results view.</p>
-<div class="tabs"><button id="tLogin" class="on" type="button">Log in</button><button id="tSignup" type="button">Sign up</button></div>
+<p class="sub">Log in to track your progress and scores.</p>
 <div id="fLogin">
-<label>Email</label><input id="liEmail" type="email" placeholder="you@company.com">
-<label>Password</label><input id="liPass" type="password" placeholder="••••••••">
+<label>Email</label><input id="liEmail" type="email" placeholder="you@company.com" autocomplete="username">
+<label>Password</label><input id="liPass" type="password" placeholder="••••••••" autocomplete="current-password">
 <button type="button" onclick="doLogin()">Log in</button>
 </div>
-<div id="fSignup" style="display:none">
-<label>Full name</label><input id="suName" type="text" placeholder="Juan Dela Cruz">
-<label>Email</label><input id="suEmail" type="email" placeholder="you@company.com">
-<label>Password (min 6)</label><input id="suPass" type="password" placeholder="Create password">
-<label>Admin code (optional — users leave blank)</label><input id="suCode" type="text" placeholder="Only for admins">
-<button type="button" onclick="doSignup()">Create account</button>
-</div>
 <div class="auth-err" id="err"></div><div class="auth-ok" id="ok"></div>
-<div class="demo">New staff: choose <b>Sign up</b> and leave the admin code blank. Admins need the code issued by the Academy owner.</div>
+<div class="demo">Accounts are created by your Academy administrator. Need access or a password reset? Ask your administrator.</div>
 </div>
 </main>
 <footer class="site-footer sec-footer"><span>© 2026 Dealerfocus Training Academy | All rights reserved.</span></footer>
 <script>
-var mode='login';
-document.getElementById('tLogin').onclick=function(){mode='login';this.classList.add('on');document.getElementById('tSignup').classList.remove('on');document.getElementById('fLogin').style.display='block';document.getElementById('fSignup').style.display='none';};
-document.getElementById('tSignup').onclick=function(){mode='signup';this.classList.add('on');document.getElementById('tLogin').classList.remove('on');document.getElementById('fSignup').style.display='block';document.getElementById('fLogin').style.display='none';};
+document.getElementById('fLogin').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;document.getElementById('ok').style.display='none';}
 function showOk(m){var e=document.getElementById('ok');e.style.display='block';e.textContent=m;document.getElementById('err').style.display='none';}
 function next(){var q=new URLSearchParams(location.search).get('next');return q||null;}
 function go(u){var n=next();if(n){location.href=n;return;}location.href=(u.role==='admin')?'admin-dashboard.html':'user-dashboard.html';}
 async function doLogin(){var r=await DFAuth.login(document.getElementById('liEmail').value,document.getElementById('liPass').value);if(r.error)showErr(r.error);else{showOk('Logged in. Redirecting…');setTimeout(function(){go(r.user);},400);}}
-async function doSignup(){var r=await DFAuth.signup(document.getElementById('suName').value,document.getElementById('suEmail').value,document.getElementById('suPass').value,document.getElementById('suCode').value.trim());if(r.error)showErr(r.error);else{showOk('Account created as '+r.user.role+'. Redirecting…');setTimeout(function(){go(r.user);},400);}}
 document.addEventListener('df:ready',function(){var me=DFAuth.current();if(me&&!next())go(me);});
 </script>
 </body>

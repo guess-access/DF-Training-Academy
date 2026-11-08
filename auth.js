@@ -160,6 +160,8 @@
     reset: function (id) { return api("POST", "admin/reset", { id: id }); },
     setScore: function (id, quiz, score) { return api("POST", "admin/score", { id: id, quiz: quiz, score: Number(score) }); },
     del: function (id) { return api("POST", "admin/delete", { id: id }); },
+    create: function (name, email, password, role) { return api("POST", "admin/create", { name: name, email: email, password: password, role: role }); },
+    setPassword: function (id, password) { return api("POST", "admin/password", { id: id, password: password }); },
     saveSettings: function (s) {
       return api("POST", "admin/settings", { passPct: s.passPct }).then(function (r) {
         if (!r.error) S.settings.passPct = Math.round(Number(s.passPct));

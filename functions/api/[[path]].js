@@ -10,6 +10,7 @@ const QUIZ_IDS = ["quiz_m1_usa", "quiz_m2_vehicle", "quiz_m3_tools", "quiz_m4_cs
 const CORE_MODULES = ["m1", "m2", "m3", "m4"];
 const SESSION_DAYS = 30;
 const PBKDF2_ITER = 100000; // Workers max
+const MIN_PASSWORD = 8;
 const MAX_FAILS = 8;
 const LOCK_MIN = 15;
 
@@ -143,37 +144,44 @@ async function readBody(req) {
 }
 
 /* ---------- route handlers ---------- */
-async function signup(req, env, url) {
-  const b = await readBody(req);
-  if (!b) return fail("Invalid request.");
-  const name = clip(b.name, 100).trim();
-  const email = clip(b.email, 200).trim().toLowerCase();
-  const password = String(b.password || "");
-  const adminCode = String(b.adminCode || "").trim();
-  if (!name || !email || !password) return fail("Name, email and password are required.");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail("Enter a valid email address.");
-  if (password.length < 6 || password.length > 200) return fail("Password must be at least 6 characters.");
-  let role = "user";
-  if (adminCode) {
-    if (!env.ADMIN_CODE) return fail("Admin signup is not enabled. Leave the admin code blank to register as User.");
-    if (!safeEqual(adminCode, String(env.ADMIN_CODE))) return fail("Invalid admin code. Leave it blank to register as User.");
-    role = "admin";
-  }
+/** Validate + insert a user. Returns { user } or { error, status }. */
+async function createUserRecord(env, { name, email, password, role }) {
+  name = clip(name, 100).trim();
+  email = clip(email, 200).trim().toLowerCase();
+  password = String(password || "");
+  if (!name || !email || !password) return { error: "Name, email and password are required.", status: 400 };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address.", status: 400 };
+  if (password.length < MIN_PASSWORD || password.length > 200) return { error: "Password must be at least " + MIN_PASSWORD + " characters.", status: 400 };
+  if (role !== "admin" && role !== "user") return { error: "Bad role.", status: 400 };
   const exists = await env.DB.prepare("SELECT 1 AS x FROM users WHERE email = ?").bind(email).first();
-  if (exists) return fail("Email already registered. Please log in.", 409);
+  if (exists) return { error: "That email already has an account.", status: 409 };
   const id = "u_" + randHex(8);
   const salt = randHex(16);
   const hash = await hashPassword(password, salt);
   const t = nowISO();
   try {
     await env.DB.prepare(
-      "INSERT INTO users (id, name, email, pass_hash, pass_salt, role, created_at, logins, last_active) VALUES (?,?,?,?,?,?,?,0,?)"
-    ).bind(id, name, email, hash, salt, role, t, t).run();
-  } catch (e) { return fail("Email already registered. Please log in.", 409); }
-  await recordLogin(env, id, req);
-  const cookie = await createSession(env, id, url);
-  const user = { id, name, email, role, createdAt: t };
-  return json(await buildState(env, user), 200, { "set-cookie": cookie });
+      "INSERT INTO users (id, name, email, pass_hash, pass_salt, role, created_at, logins, last_active) VALUES (?,?,?,?,?,?,?,0,NULL)"
+    ).bind(id, name, email, hash, salt, role, t).run();
+  } catch (e) { return { error: "That email already has an account.", status: 409 }; }
+  return { user: { id, name, email, role, createdAt: t } };
+}
+
+/* Public sign-up is CLOSED. Accounts are created only by an admin (POST /api/admin/create).
+ * The one exception is recovery/bootstrap: while the users table is EMPTY, the first account may be
+ * created as admin with the ADMIN_CODE secret. As soon as one user exists this always refuses. */
+async function signup(req, env, url) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM users").first();
+  if (n.n > 0) return fail("Sign-up is closed. Ask an administrator to create your account.", 403);
+  const adminCode = String(b.adminCode || "").trim();
+  if (!env.ADMIN_CODE || !adminCode || !safeEqual(adminCode, String(env.ADMIN_CODE))) return fail("Sign-up is closed. Ask an administrator to create your account.", 403);
+  const r = await createUserRecord(env, { name: b.name, email: b.email, password: b.password, role: "admin" });
+  if (r.error) return fail(r.error, r.status);
+  await recordLogin(env, r.user.id, req);
+  const cookie = await createSession(env, r.user.id, url);
+  return json(await buildState(env, r.user), 200, { "set-cookie": cookie });
 }
 
 async function login(req, env, url) {
@@ -327,6 +335,11 @@ async function adminAction(action, req, env, me) {
     await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('passPct', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(String(v)).run();
     return json({ ok: true });
   }
+  if (action === "create") {
+    const r = await createUserRecord(env, { name: b.name, email: b.email, password: b.password, role: b.role === "admin" ? "admin" : "user" });
+    if (r.error) return fail(r.error, r.status);
+    return json({ ok: true, user: r.user });
+  }
   const id = String(b.id || "");
   const target = await env.DB.prepare("SELECT id, role FROM users WHERE id = ?").bind(id).first();
   if (!target) return fail("Not found.", 404);
@@ -337,6 +350,17 @@ async function adminAction(action, req, env, me) {
       return fail("Cannot remove the last admin.");
     }
     await env.DB.prepare("UPDATE users SET role = ? WHERE id = ?").bind(b.role, id).run();
+    return json({ ok: true });
+  }
+  if (action === "password") {
+    const pw = String(b.password || "");
+    if (pw.length < MIN_PASSWORD || pw.length > 200) return fail("Password must be at least " + MIN_PASSWORD + " characters.");
+    const salt = randHex(16);
+    const hash = await hashPassword(pw, salt);
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET pass_hash = ?, pass_salt = ? WHERE id = ?").bind(hash, salt, id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id)
+    ]);
     return json({ ok: true });
   }
   if (action === "reset") {

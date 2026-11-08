@@ -353,6 +353,8 @@ async function adminAction(action, req, env, me) {
     return json({ ok: true });
   }
   if (action === "password") {
+    // nobody may change their own login; another admin resets it
+    if (id === me.id) return fail("You cannot change your own login. Ask another admin.", 403);
     const pw = String(b.password || "");
     if (pw.length < MIN_PASSWORD || pw.length > 200) return fail("Password must be at least " + MIN_PASSWORD + " characters.");
     const salt = randHex(16);

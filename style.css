@@ -18,6 +18,10 @@ a{color:inherit;text-decoration:none;}
 .site-nav a{font-size:14px;font-weight:600;opacity:.8;}
 .site-nav a:hover{opacity:1;}
 .site-nav a.active-page{opacity:1;font-weight:700;}
+.site-nav #dfAuthLink{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+.df-logout-btn{font:inherit;font-size:14px;font-weight:700;line-height:1;color:#050141;background:var(--color-accent);border:0;border-radius:999px;padding:9px 20px;margin-left:6px;cursor:pointer;box-shadow:0 0 0 1px rgba(5,1,65,.25);transition:transform .15s,filter .15s;}
+.df-logout-btn:hover{transform:translateY(-1px);filter:brightness(.92);}
+.df-logout-btn:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px;}
 .hero{position:relative;overflow:hidden;padding:9vh 6vw 8vh;text-align:left;}
 .hero::before{content:'';position:absolute;inset:0;background-image:var(--hero-bg, none);background-size:cover;background-position:center;z-index:0;}
 .hero-content{position:relative;z-index:1;}

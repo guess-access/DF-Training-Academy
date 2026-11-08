@@ -194,7 +194,7 @@
     var dash = me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html";
     var label = me.role === "admin" ? "Admin" : "My Progress";
     return '<a href="' + dash + '" style="font-weight:800">' + label + '</a>' +
-      '<a href="#" id="dfLogout">Logout (' + esc(String(me.name).split(" ")[0]) + ')</a>';
+      '<button type="button" id="dfLogout" class="df-logout-btn" title="Signed in as ' + esc(me.name) + '">Logout</button>';
   }
 
   function injectNav() {

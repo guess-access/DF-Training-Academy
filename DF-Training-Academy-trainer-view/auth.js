@@ -1,0 +1,304 @@
+/* DealerFocus Training Academy — Auth + Roles + Progress (Cloudflare backend)
+ * Roles: admin (sees/edits ALL users' results, progress and usage) / user (own progress only)
+ * Storage: Cloudflare D1 via /api/* (see functions/api/[[path]].js). The server enforces who can see what;
+ * this file only keeps an in-memory copy of the signed-in user's own data so pages can read it synchronously.
+ * Pages wait for the "df:ready" event (fired once the session + data are loaded).
+ */
+(function () {
+  "use strict";
+  var PASS_DEFAULT = 80;
+
+  var MODULES = [
+    { id: "m1", title: "Module 01 — All About the USA", href: "module-01-usa.html", quiz: "quiz_m1_usa" },
+    { id: "m2", title: "Module 02 — Vehicle 101", href: "module-02-vehicle101.html", quiz: "quiz_m2_vehicle" },
+    { id: "m3", title: "Module 03 — Program Software & Tools", href: "module-03-software-tools.html", quiz: "quiz_m3_tools" },
+    { id: "m4", title: "Module 04 — CSR Fundamentals", href: "module-04-csr-fundamentals.html", quiz: "quiz_m4_csr" },
+    { id: "m5", title: "Module 05 — Certification (Final)", href: "module-05-certification.html", quiz: "quiz_final" },
+    { id: "m6", title: "Module 06 — Refresher Courses (Optional)", href: "module-06-refresher-courses.html", quiz: "quiz_m6_refresh", optional: true }
+  ];
+
+  /* ---- in-memory copy of the signed-in user's data (source of truth is the server) ---- */
+  var isReady = false;
+  var S = emptyState();
+  function emptyState() {
+    return {
+      user: null,
+      progress: { modules: {}, quizzes: {} },
+      attempts: [],
+      usage: { views: [], logins: [], dwell: {} },
+      completion: {},
+      certificate: null,
+      about: { completed: false, videoPct: 0, pageSec: 0, minSec: 300, skips: 0, duration: 0 },
+      settings: { passPct: PASS_DEFAULT, aboutGate: false, aboutMinSec: 300 }
+    };
+  }
+  function applyState(r) {
+    var e = emptyState();
+    S = {
+      user: r.user || null,
+      progress: r.progress || e.progress,
+      attempts: r.attempts || e.attempts,
+      usage: r.usage || e.usage,
+      completion: r.completion || e.completion,
+      certificate: r.certificate || null,
+      about: r.about || e.about,
+      settings: r.settings || e.settings
+    };
+    S.usage.views = S.usage.views || []; S.usage.logins = S.usage.logins || []; S.usage.dwell = S.usage.dwell || {};
+  }
+
+  function nowISO() { return new Date().toISOString(); }
+  function uid() { return "a_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  /* ---- API ---- */
+  var pending = [];
+  // ?preview=1 (admin only): the Trainer view shows modules exactly as trainees see them, but nothing is recorded
+  var PREVIEW = /[?&]preview=1(&|$)/.test(location.search);
+  function previewOn() { return PREVIEW && !!S.user && S.user.role === "admin"; }
+  function api(method, path, body, keepalive) {
+    var opts = { method: method, credentials: "same-origin", headers: {} };
+    if (body !== undefined) { opts.headers["content-type"] = "application/json"; opts.body = JSON.stringify(body); }
+    if (keepalive) opts.keepalive = true;
+    return fetch("/api/" + path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok && !j.error) j.error = "Request failed (" + r.status + ").";
+        return j;
+      });
+    }).catch(function () { return { error: "Network error. Check your connection and try again." }; });
+  }
+  function write(path, body) {
+    if (previewOn()) return Promise.resolve({ ok: true, preview: true });
+    var p = api("POST", path, body, true);
+    pending.push(p);
+    p.then(function () { var i = pending.indexOf(p); if (i >= 0) pending.splice(i, 1); });
+    return p;
+  }
+  /** Resolves once every progress/score write started so far has reached the server. */
+  function flush() { return Promise.all(pending.slice()); }
+
+  function getSettings() { return { passPct: S.settings.passPct, aboutGate: !!S.settings.aboutGate, aboutMinSec: S.settings.aboutMinSec || 300, modules: MODULES }; }
+  function currentUser() { return S.user; }
+
+  function strip(u) { return { id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.createdAt }; }
+
+  /* ---- signup / login / logout ---- */
+  async function signup(name, email, password, adminCode) {
+    name = (name || "").trim(); email = (email || "").trim().toLowerCase();
+    if (!name || !email || !password) return { error: "Name, email and password are required." };
+    if (password.length < 6) return { error: "Password must be at least 6 characters." };
+    var r = await api("POST", "signup", { name: name, email: email, password: password, adminCode: adminCode || "" });
+    if (r.error) return r;
+    applyState(r);
+    await migrateLegacy();
+    return { user: strip(S.user) };
+  }
+
+  async function login(email, password) {
+    var r = await api("POST", "login", { email: (email || "").trim().toLowerCase(), password: password || "" });
+    if (r.error) return r;
+    applyState(r);
+    await migrateLegacy();
+    return { user: strip(S.user) };
+  }
+
+  function logout() {
+    api("POST", "logout", {}).then(function () { S = emptyState(); location.href = "login.html"; });
+  }
+
+  /* one-time: move completions from the old single-browser cert tracker (dfCert_v1) into the signed-in account */
+  async function migrateLegacy() {
+    try {
+      var raw = localStorage.getItem("dfCert_v1");
+      if (!raw || !S.user) return;
+      var legacy = JSON.parse(raw);
+      ["m1", "m2", "m3", "m4"].forEach(function (k) { if (legacy.modules && legacy.modules[k]) markModule(k, true); });
+      if (legacy.written && legacy.written.score !== null && legacy.written.score !== undefined) logQuiz("quiz_final", legacy.written.score, 100, { source: "migrated" });
+      await flush();
+      localStorage.removeItem("dfCert_v1");
+    } catch (e) {}
+  }
+
+  /* ---- usage ---- */
+  function trackView(page) {
+    if (!S.user) return;
+    page = page || location.pathname.split("/").pop() || "index.html";
+    S.usage.views.push({ at: nowISO(), page: page });
+    write("usage", { kind: "view", page: page });
+  }
+  function logDwell(page, sec) {
+    if (!S.user) return;
+    S.usage.dwell[page] = (S.usage.dwell[page] || 0) + sec;
+    write("usage", { kind: "dwell", page: page, sec: sec });
+  }
+
+  /* ---- progress ---- */
+  function markModule() { /* Modules are flagged Completed automatically by the server (100% completion + passing score). */ }
+  function paceReport(payload) {
+    if (!S.user) return;
+    var c = S.completion[payload.module] = S.completion[payload.module] || { pages: {}, total: payload.total, pct: 0 };
+    if (payload.pct > (c.pages[payload.page] || 0)) c.pages[payload.page] = payload.pct;
+    c.total = payload.total;
+    var sum = Object.keys(c.pages).reduce(function (a, k) { return a + Math.min(100, c.pages[k]); }, 0);
+    var was100 = c.reached100;
+    c.pct = Math.min(100, Math.floor(sum / c.total));
+    write("pace", payload);
+    if (c.pct >= 100 && !was100) { c.reached100 = true; document.dispatchEvent(new CustomEvent("df:module-read", { detail: payload.module })); }
+  }
+  /** Ask the server to issue the certificate if everything is complete. Resolves to the certificate or null. */
+  function checkCertificate() {
+    return flush().then(function () { return api("POST", "certificate", {}); }).then(function (r) {
+      if (r && r.certificate) S.certificate = r.certificate;
+      return S.certificate;
+    });
+  }
+
+  /** Attempt limit set by the trainer (Quiz Settings). Staff only; the server enforces it too. */
+  function quizLocked(quizId) {
+    var max = (S.settings.quizPolicy || {})[quizId] || 0;
+    if (!S.user || S.user.role === "admin" || !max) return { locked: false, max: max, used: 0 };
+    var used = S.attempts.filter(function (a) { return a.quiz === quizId && a.source !== "admin-edit"; }).length;
+    return { locked: used >= max, max: max, used: used };
+  }
+  function logQuiz(quizId, score, total, extra, answers) {
+    if (!S.user) return null;
+    total = total || 100;
+    var pct = Math.round((score / total) * 100);
+    var passed = pct >= S.settings.passPct;
+    var prev = S.progress.quizzes[quizId];
+    if (!prev || pct >= prev.score) S.progress.quizzes[quizId] = { score: pct, passed: passed, at: nowISO() };
+    var rec = { id: uid(), quiz: quizId, score: pct, raw: score, total: total, passed: passed, at: nowISO() };
+    if (extra) rec.extra = extra;
+    S.attempts.push(rec);
+    write("quiz", { quiz: quizId, raw: score, total: total, extra: extra || null, answers: answers || null });
+    return rec;
+  }
+
+  function isCertified() {
+    var p = S.progress;
+    return ["m1", "m2", "m3", "m4", "m5"].every(function (m) { return p.modules[m]; });
+  }
+
+  /* ---- admin ops (the server rejects non-admins; these are just thin wrappers) ---- */
+  var admin = {
+    list: function () { return api("GET", "admin/users"); },
+    get: function (id) { return api("GET", "admin/user?id=" + encodeURIComponent(id)); },
+    setRole: function (id, role) { return api("POST", "admin/role", { id: id, role: role }); },
+    reset: function (id) { return api("POST", "admin/reset", { id: id }); },
+    setScore: function (id, quiz, score) { return api("POST", "admin/score", { id: id, quiz: quiz, score: Number(score) }); },
+    del: function (id) { return api("POST", "admin/delete", { id: id }); },
+    create: function (name, email, password, role) { return api("POST", "admin/create", { name: name, email: email, password: password, role: role }); },
+    setPassword: function (id, password) { return api("POST", "admin/password", { id: id, password: password }); },
+    aboutReset: function (id) { return api("POST", "admin/aboutreset", { id: id }); },
+    module: function (m) { return api("GET", "admin/module?m=" + encodeURIComponent(m)); },
+    saveGuide: function (m, instructions, tools) { return api("POST", "admin/guide", { module: m, instructions: instructions, tools: tools }); },
+    setAttemptLimit: function (quiz, n) { return api("POST", "admin/quizpolicy", { quiz: quiz, maxAttempts: n }); },
+    resetAttempt: function (id, quiz) { return api("POST", "admin/attemptreset", { id: id, quiz: quiz }); },
+    addNote: function (userId, m, note) { return api("POST", "admin/note", { userId: userId, module: m, note: note }); },
+    delNote: function (id) { return api("POST", "admin/notedelete", { id: id }); },
+    saveSettings: function (s) {
+      return api("POST", "admin/settings", s).then(function (r) {
+        if (!r.error) {
+          if (s.passPct !== undefined) S.settings.passPct = Math.round(Number(s.passPct));
+          if (s.aboutGate !== undefined) S.settings.aboutGate = !!s.aboutGate;
+          if (s.aboutMinSec !== undefined) S.settings.aboutMinSec = Math.round(Number(s.aboutMinSec));
+        }
+        return r;
+      });
+    }
+  };
+
+  /* ---- login redirect target: a page on this site only, never another site or a script URL ---- */
+  function safeNext() {
+    var q = new URLSearchParams(location.search).get("next");
+    return q && /^[A-Za-z0-9][A-Za-z0-9_\-\/]*(\.html)?$/.test(q) ? q : null;
+  }
+
+  /* ---- page guard + nav ---- */
+  function guardHTML() {
+    // Entire site is private: every page requires an active login session.
+    // Only login.html itself is public (otherwise nobody could sign in).
+    var me = S.user;
+    var file = (location.pathname.split("/").pop() || "index.html").toLowerCase().replace(/\.html$/, "");
+    if (file === "") file = "index";
+    var adminPages = ["admin-dashboard", "admin", "trainer"];
+    if (file === "login") {
+      if (me) { var n = safeNext(); location.href = n || (me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html"); }
+      return;
+    }
+    if (!me) { location.href = "login.html?next=" + encodeURIComponent(file + ".html"); return; }
+    if (adminPages.indexOf(file) >= 0 && me.role !== "admin") { location.href = "user-dashboard.html"; return; }
+    // Gatekeeper: until About Us is complete, staff can only open Home, About Us and My Progress.
+    if (gateBlocked() && ["index", "about-us", "user-dashboard"].indexOf(file) < 0) { location.href = "about-us.html"; return; }
+  }
+
+  /** True when the About Us gate is on, the user is staff, and they have not yet watched 50% of the About Us video. */
+  function gateBlocked() {
+    return !!(S.user && S.user.role === "user" && S.settings.aboutGate && !(S.about && (S.about.completed || S.about.unlocked)));
+  }
+
+  /** About Us heartbeat (video position + visibility). The server decides what counts; see functions/api. */
+  function aboutBeat(payload, keepalive) {
+    if (!S.user) return Promise.resolve({ error: "Not signed in." });
+    return api("POST", "about/beat", payload, !!keepalive).then(function (r) {
+      if (r && r.about) S.about = r.about;
+      return r;
+    });
+  }
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  function navHTML() {
+    var me = S.user;
+    if (!me) return '<a href="login.html" style="font-weight:800">Login</a>';
+    var dash = me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html";
+    var label = me.role === "admin" ? "Admin" : "My Progress";
+    return (me.role === "admin" ? '<a href="trainer.html" style="font-weight:800">Trainer View</a>' : '') +
+      '<a href="' + dash + '" style="font-weight:800">' + label + '</a>' +
+      '<button type="button" id="dfLogout" class="df-logout-btn" title="Signed in as ' + esc(me.name) + '">Logout</button>';
+  }
+
+  function injectNav() {
+    try {
+      var nav = document.querySelector("nav.site-nav");
+      if (nav && !document.getElementById("dfAuthLink") && !document.getElementById("dfLogout")) {
+        var span = document.createElement("span");
+        span.id = "dfAuthLink";
+        span.innerHTML = navHTML();
+        nav.appendChild(span);
+        var lo = document.getElementById("dfLogout");
+        if (lo) lo.addEventListener("click", function (e) { e.preventDefault(); logout(); });
+      }
+    } catch (e) {}
+  }
+
+  window.DFAuth = {
+    safeNext: safeNext,
+    reloadState: function () { return flush().then(function () { return api("GET", "state"); }).then(function (r) { if (!r.error) applyState(r); }); },
+    signup: signup, login: login, logout: logout, current: currentUser,
+    trackView: trackView, markModule: markModule, logQuiz: logQuiz, quizLocked: quizLocked, logDwell: logDwell, flush: flush,
+    getProgress: function () { return S.user ? S.progress : null; },
+    getAttempts: function () { return S.user ? S.attempts : null; },
+    getUsage: function () { return S.user ? S.usage : null; },
+    isCertified: function () { return S.user ? isCertified() : false; },
+    getSettings: getSettings, MODULES: MODULES,
+    getCompletion: function () { return S.user ? S.completion : null; }, paceReport: paceReport,
+    getCertificate: function () { return S.user ? S.certificate : null; }, checkCertificate: checkCertificate,
+    getAbout: function () { return S.user ? S.about : null; }, gateBlocked: gateBlocked, aboutBeat: aboutBeat,
+    // run fn once session + data are loaded; works whether that already happened or not (a late-loading
+    // script can miss the one-time "df:ready" event, so pages use this instead of listening for it)
+    onReady: function (fn) { if (isReady) setTimeout(fn, 0); else document.addEventListener("df:ready", function () { fn(); }, { once: true }); },
+    admin: admin, esc: esc
+  };
+
+  // remove credential data left in this browser by the old localStorage-only version
+  try { localStorage.removeItem("df_users_v1"); localStorage.removeItem("df_session_v1"); } catch (e) {}
+
+  api("GET", "state").then(function (r) {
+    applyState(r.error ? {} : r);
+    guardHTML();
+    injectNav();
+    try { trackView(); } catch (e) {}
+    isReady = true;
+    document.dispatchEvent(new Event("df:ready"));
+  });
+})();

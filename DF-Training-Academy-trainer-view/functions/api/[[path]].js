@@ -1,0 +1,775 @@
+/* DealerFocus Training Academy — API (Cloudflare Pages Functions + D1)
+ * All data lives in the D1 database bound as env.DB. Authorization is enforced HERE, server-side:
+ *   - user  : can read/write ONLY their own progress, scores and usage
+ *   - admin : can read/edit everyone's data
+ * Secret (Pages > Settings > Variables and Secrets): ADMIN_CODE  — code needed to sign up as an admin.
+ */
+
+const MODULE_IDS = ["m1", "m2", "m3", "m4", "m5", "m6"];
+const QUIZ_IDS = ["quiz_m1_usa", "quiz_m2_vehicle", "quiz_m3_tools", "quiz_m4_csr", "quiz_final", "quiz_m6_refresh"];
+const REQUIRED_MODULES = ["m1", "m2", "m3", "m4", "m5"]; // Module 6 (Refresher) is optional
+// assessment that decides each module; null = the module has no assessment, so 100% completion alone completes it
+const MODULE_QUIZ = { m1: "quiz_m1_usa", m2: "quiz_m2_vehicle", m3: null, m4: "quiz_m4_csr", m5: "quiz_final", m6: null };
+const SESSION_DAYS = 30;
+const PBKDF2_ITER = 100000; // Workers max
+const MIN_PASSWORD = 8;
+// About Us gate: the team video must be watched in order at normal speed; time on the page is also required.
+const ABOUT_MAX_DURATION = 3600;   // seconds; longer videos are refused
+const ABOUT_UNLOCK_PCT = 50;       // staff may move on to the Modules once this much of the video is watched in order
+const ABOUT_COVER_NEED = 0.97;     // share of the video that must have been played in order
+const BEAT_MAX_WALL = 20;          // time-on-page: a heartbeat gap longer than this adds no page time
+const COVER_MAX_WALL = 120;        // video credit: playback is capped by real elapsed time, so longer gaps are safe
+const ABOUT_DEFAULT_MIN_SEC = 300; // default minimum time on the About Us page (5 minutes)
+const MAX_FAILS = 8;
+const LOCK_MIN = 15;
+// Starting text for each module's Trainer's Guide; an admin can edit it in the Trainer view (saved in D1 table `guides`).
+const DEFAULT_GUIDES = {
+  m1: { instructions: "Goal: trainees can name the states, abbreviations and time zones and place states in regions.\n1. Let trainees work through both lessons (States & Time Zones, Regions & States) before the assessment.\n2. Time zones are the most commonly missed area: check the Question Analytics tab after a few attempts.\n3. Pass mark is set on the Admin dashboard.", tools: "Interactive training: module-01-usa-interactive-training\nUse Preview as Trainee (Trainee's Module tab) to walk through it without recording anything." },
+  m2: { instructions: "Goal: trainees know basic vehicle parts, accessories, maintenance and diagnostics.\nThe assessment is a Google Form, so scores are entered with Log score (trainee) or Set score (admin). Per-question answers are viewed in the Google Form responses.", tools: "Assessment: the Google Form linked from the module's Assessment button." },
+  m3: { instructions: "Goal: trainees can navigate the programs and software used daily.\nThe walkthroughs sit on an outside site, so only time on the page is measured. Confirm hands-on skills with a short live check.", tools: "Outside training site linked from the module page." },
+  m4: { instructions: "Goal: trainees handle calls professionally, including difficult customers.\nEach knowledge check counts once, on the first answer. The score is recorded when every check has been answered.", tools: "Interactive lessons: csr_fundamentals" },
+  m5: { instructions: "Goal: final written assessment covering Modules 1-4. Passing it, with Modules 1-4 Completed, issues the Graduation Certificate.\nConsider setting the attempt limit here (Quiz Settings tab).", tools: "Final Written Assessment on the module page." },
+  m6: { instructions: "Optional refresher. It does not affect certification and has no assessment.", tools: "Refresher courses embedded on the module page." }
+};
+
+const enc = new TextEncoder();
+const nowISO = () => new Date().toISOString();
+
+function json(data, status = 200, headers = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers }
+  });
+}
+const fail = (msg, status = 400) => json({ error: msg }, status);
+
+/* ---------- crypto ---------- */
+const toHex = (buf) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+function randHex(n) { return toHex(crypto.getRandomValues(new Uint8Array(n))); }
+async function sha256Hex(s) { return toHex(await crypto.subtle.digest("SHA-256", enc.encode(s))); }
+async function hashPassword(password, saltHex, iter = PBKDF2_ITER) {
+  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: enc.encode(saltHex), iterations: iter }, key, 256);
+  return iter + ":" + toHex(bits); // iteration count is stored with the hash so it can be raised later
+}
+function safeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+/* ---------- helpers ---------- */
+function getCookie(req, name) {
+  const c = req.headers.get("cookie") || "";
+  for (const part of c.split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    if (k === name) return v.join("=");
+  }
+  return null;
+}
+function sessionCookie(token, url, maxAge) {
+  return `df_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}` + (url.protocol === "https:" ? "; Secure" : "");
+}
+const clip = (s, n) => String(s == null ? "" : s).slice(0, n);
+
+async function getPassPct(env) {
+  const r = await env.DB.prepare("SELECT value FROM settings WHERE key='passPct'").first();
+  const n = r ? Number(r.value) : 80;
+  return n >= 1 && n <= 100 ? n : 80;
+}
+
+/** Completion of one module: the average of its lesson pages' read percentages. */
+function completionOf(row) {
+  let pages = {};
+  try { pages = JSON.parse(row.pages || "{}"); } catch (e) {}
+  let sum = 0;
+  Object.keys(pages).forEach((k) => { sum += Math.min(100, Number(pages[k]) || 0); });
+  const total = Math.max(1, row.total || 1);
+  return { pct: Math.min(100, Math.floor(sum / total)), pages, total, at: row.updated_at };
+}
+
+/** A module is Completed automatically: 100% completion AND (no assessment, or assessment at/above the pass mark). */
+function moduleCompleted(moduleId, comp, score, passPct) {
+  if (!comp || comp.pct < 100) return false;
+  if (!MODULE_QUIZ[moduleId]) return true;
+  return score !== undefined && score !== null && score >= passPct;
+}
+
+async function getAboutCfg(env) {
+  const { results } = await env.DB.prepare("SELECT key, value FROM settings WHERE key IN ('aboutGate','aboutMinSec')").all();
+  const m = {};
+  results.forEach((r) => { m[r.key] = r.value; });
+  let minSec = Number(m.aboutMinSec);
+  if (!(minSec >= 30 && minSec <= 3600)) minSec = ABOUT_DEFAULT_MIN_SEC;
+  return { gate: m.aboutGate === "1", minSec: Math.round(minSec) };
+}
+
+function countOnes(str) {
+  let n = 0;
+  for (let i = 0; i < str.length; i++) if (str.charCodeAt(i) === 49) n++;
+  return n;
+}
+
+function aboutSummary(row, cfg) {
+  const dur = row && row.duration ? row.duration : 0;
+  const n = Math.ceil(dur);
+  const covered = row && row.coverage ? countOnes(row.coverage) : 0;
+  // where the viewer left off, so the player can resume (a few seconds earlier so nothing is missed)
+  let resumePos = 0;
+  if (row && !row.completed_at && !row.ended && row.last_pos > 8 && dur && row.last_pos < dur - 3) {
+    // rewind a little only if they left mid-playback; if they had paused, resume exactly there
+    resumePos = Math.max(0, Math.floor(row.last_pos) - (row.last_playing ? 3 : 0));
+  }
+  const videoPctNow = n ? Math.min(100, Math.floor((covered / n) * 100)) : 0;
+  return {
+    resumePos,
+    unlocked: !!(row && row.completed_at) || videoPctNow >= ABOUT_UNLOCK_PCT,
+    completed: !!(row && row.completed_at),
+    completedAt: row && row.completed_at ? row.completed_at : null,
+    videoPct: n ? Math.min(100, Math.floor((covered / n) * 100)) : 0,
+    pageSec: row ? Math.round(row.page_sec) : 0,
+    minSec: cfg.minSec,
+    skips: row ? row.violations : 0,
+    duration: dur
+  };
+}
+
+async function aboutUnlocked(env, userId) {
+  const r = await env.DB.prepare("SELECT coverage, duration, completed_at FROM about_progress WHERE user_id = ?").bind(userId).first();
+  if (!r) return false;
+  if (r.completed_at) return true;
+  const n = Math.ceil(r.duration || 0);
+  return n > 0 && (countOnes(r.coverage || "") / n) * 100 >= ABOUT_UNLOCK_PCT;
+}
+
+/** Staff cannot record module progress or quiz scores until 50% of the About Us video is watched (when the gate is on). */
+async function gateBlocks(env, me) {
+  if (me.role === "admin") return false;
+  const cfg = await getAboutCfg(env);
+  if (!cfg.gate) return false;
+  return !(await aboutUnlocked(env, me.id));
+}
+
+async function currentUser(req, env) {
+  const token = getCookie(req, "df_session");
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) return null;
+  const th = await sha256Hex(token);
+  const row = await env.DB.prepare(
+    "SELECT u.id, u.name, u.email, u.role, u.created_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?"
+  ).bind(th, nowISO()).first();
+  return row ? { id: row.id, name: row.name, email: row.email, role: row.role, createdAt: row.created_at } : null;
+}
+
+async function createSession(env, userId, url) {
+  const token = randHex(32);
+  const th = await sha256Hex(token);
+  const exp = new Date(Date.now() + SESSION_DAYS * 864e5).toISOString();
+  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?,?,?,?)")
+    .bind(th, userId, nowISO(), exp).run();
+  // opportunistic cleanup of expired sessions
+  await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(nowISO()).run();
+  return sessionCookie(token, url, SESSION_DAYS * 86400);
+}
+
+/** Full per-user state (progress, attempts, usage). Used for the user's own view and the admin's detail view. */
+async function buildUserData(env, userId) {
+  const passPctNow = await getPassPct(env);
+  const [compRows, quizzes, attempts, views, logins, dwell] = await env.DB.batch([
+    env.DB.prepare("SELECT module_id, pages, total, updated_at FROM module_completion WHERE user_id = ?").bind(userId),
+    env.DB.prepare("SELECT quiz_id, score, passed, at, edited_by_admin FROM quizzes WHERE user_id = ?").bind(userId),
+    env.DB.prepare("SELECT id, quiz_id, score, raw, total, passed, at, source, extra FROM attempts WHERE user_id = ? ORDER BY at DESC LIMIT 200").bind(userId),
+    env.DB.prepare("SELECT page, at FROM usage_events WHERE user_id = ? AND kind='view' ORDER BY id DESC LIMIT 500").bind(userId),
+    env.DB.prepare("SELECT at, ua FROM usage_events WHERE user_id = ? AND kind='login' ORDER BY id DESC LIMIT 200").bind(userId),
+    env.DB.prepare("SELECT page, SUM(sec) AS sec FROM usage_events WHERE user_id = ? AND kind='dwell' GROUP BY page").bind(userId)
+  ]);
+  const progress = { modules: {}, quizzes: {} };
+  quizzes.results.forEach((r) => {
+    progress.quizzes[r.quiz_id] = { score: r.score, passed: !!r.passed, at: r.at };
+    if (r.edited_by_admin) progress.quizzes[r.quiz_id].editedByAdmin = true;
+  });
+  const completion = {};
+  compRows.results.forEach((r) => { completion[r.module_id] = completionOf(r); });
+  MODULE_IDS.forEach((m) => {
+    const q = progress.quizzes[MODULE_QUIZ[m]];
+    if (moduleCompleted(m, completion[m], q ? q.score : null, passPctNow)) progress.modules[m] = { done: true, at: completion[m].at };
+  });
+  const certRow = await env.DB.prepare("SELECT cert_no, name, score, issued_at FROM certificates WHERE user_id = ?").bind(userId).first();
+  const cfgAbout = await getAboutCfg(env);
+  const aboutRow = await env.DB.prepare("SELECT coverage, page_sec, duration, violations, completed_at, last_pos, last_playing, ended FROM about_progress WHERE user_id = ?").bind(userId).first();
+  const usage = {
+    views: views.results.reverse(),
+    logins: logins.results.reverse(),
+    dwell: {}
+  };
+  dwell.results.forEach((r) => { usage.dwell[r.page] = r.sec; });
+  return {
+    progress,
+    attempts: attempts.results.reverse().map((a) => {
+      const o = { id: a.id, quiz: a.quiz_id, score: a.score, raw: a.raw, total: a.total, passed: !!a.passed, at: a.at };
+      if (a.source) o.source = a.source;
+      if (a.extra) { try { o.extra = JSON.parse(a.extra); } catch (e) {} }
+      return o;
+    }),
+    usage,
+    completion,
+    certificate: certRow ? { certNo: certRow.cert_no, name: certRow.name, score: certRow.score, issuedAt: certRow.issued_at } : null,
+    about: aboutSummary(aboutRow, cfgAbout)
+  };
+}
+
+function isCertified(progress) {
+  return REQUIRED_MODULES.every((m) => progress.modules[m]);
+}
+
+/** Issue the Graduation Certificate once all required modules are Completed. One per user; number and date never change. */
+async function issueCertificate(env, user, data) {
+  if (data.certificate) return data.certificate;
+  if (user.role === "admin" || !isCertified(data.progress)) return null;
+  const q = data.progress.quizzes.quiz_final;
+  const score = q ? q.score : 0, issuedAt = nowISO();
+  const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let tries = 0; tries < 5; tries++) {
+    const rnd = crypto.getRandomValues(new Uint8Array(6));
+    const certNo = "DFA-" + issuedAt.slice(0, 4) + "-" + Array.from(rnd, (b) => ABC[b % ABC.length]).join("");
+    await env.DB.prepare("INSERT OR IGNORE INTO certificates (user_id, cert_no, name, score, issued_at) VALUES (?,?,?,?,?)").bind(user.id, certNo, user.name, score, issuedAt).run();
+    const row = await env.DB.prepare("SELECT cert_no, name, score, issued_at FROM certificates WHERE user_id = ?").bind(user.id).first();
+    if (row) return { certNo: row.cert_no, name: row.name, score: row.score, issuedAt: row.issued_at };
+  }
+  return null;
+}
+
+async function buildState(env, user) {
+  const passPct = await getPassPct(env);
+  const cfg = await getAboutCfg(env);
+  const settings = { passPct, aboutGate: cfg.gate, aboutMinSec: cfg.minSec };
+  if (!user) return { user: null, settings };
+  const pol = await env.DB.prepare("SELECT quiz_id, max_attempts FROM quiz_policy WHERE max_attempts > 0").all();
+  settings.quizPolicy = {};
+  pol.results.forEach((r) => { settings.quizPolicy[r.quiz_id] = r.max_attempts; });
+  const data = await buildUserData(env, user.id);
+  data.certificate = await issueCertificate(env, user, data);
+  return { user, settings, ...data };
+}
+
+async function recordLogin(env, userId, req) {
+  const t = nowISO();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET logins = logins + 1, last_active = ? WHERE id = ?").bind(t, userId),
+    env.DB.prepare("INSERT INTO usage_events (user_id, kind, page, ua, at) VALUES (?, 'login', NULL, ?, ?)")
+      .bind(userId, clip(req.headers.get("user-agent"), 120), t)
+  ]);
+}
+
+async function readBody(req) {
+  try { return await req.json(); } catch (e) { return null; }
+}
+
+/* ---------- route handlers ---------- */
+/** Validate + insert a user. Returns { user } or { error, status }. */
+async function createUserRecord(env, { name, email, password, role }) {
+  name = clip(name, 100).trim();
+  email = clip(email, 200).trim().toLowerCase();
+  password = String(password || "");
+  if (!name || !email || !password) return { error: "Name, email and password are required.", status: 400 };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address.", status: 400 };
+  if (password.length < MIN_PASSWORD || password.length > 200) return { error: "Password must be at least " + MIN_PASSWORD + " characters.", status: 400 };
+  if (role !== "admin" && role !== "user") return { error: "Bad role.", status: 400 };
+  const exists = await env.DB.prepare("SELECT 1 AS x FROM users WHERE email = ?").bind(email).first();
+  if (exists) return { error: "That email already has an account.", status: 409 };
+  const id = "u_" + randHex(8);
+  const salt = randHex(16);
+  const hash = await hashPassword(password, salt);
+  const t = nowISO();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO users (id, name, email, pass_hash, pass_salt, role, created_at, logins, last_active) VALUES (?,?,?,?,?,?,?,0,NULL)"
+    ).bind(id, name, email, hash, salt, role, t).run();
+  } catch (e) { return { error: "That email already has an account.", status: 409 }; }
+  return { user: { id, name, email, role, createdAt: t } };
+}
+
+/* Public sign-up is CLOSED. Accounts are created only by an admin (POST /api/admin/create).
+ * The one exception is recovery/bootstrap: while the users table is EMPTY, the first account may be
+ * created as admin with the ADMIN_CODE secret. As soon as one user exists this always refuses. */
+async function signup(req, env, url) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM users").first();
+  if (n.n > 0) return fail("Sign-up is closed. Ask an administrator to create your account.", 403);
+  const adminCode = String(b.adminCode || "").trim();
+  if (!env.ADMIN_CODE || !adminCode || !safeEqual(adminCode, String(env.ADMIN_CODE))) return fail("Sign-up is closed. Ask an administrator to create your account.", 403);
+  const r = await createUserRecord(env, { name: b.name, email: b.email, password: b.password, role: "admin" });
+  if (r.error) return fail(r.error, r.status);
+  await recordLogin(env, r.user.id, req);
+  const cookie = await createSession(env, r.user.id, url);
+  return json(await buildState(env, r.user), 200, { "set-cookie": cookie });
+}
+
+async function login(req, env, url) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  const email = clip(b.email, 200).trim().toLowerCase();
+  const password = String(b.password || "");
+  if (!email || !password) return fail("Invalid email or password.", 401);
+
+  const lock = await env.DB.prepare("SELECT count, locked_until FROM login_failures WHERE email = ?").bind(email).first();
+  if (lock && lock.locked_until && lock.locked_until > nowISO()) {
+    return fail("Too many failed attempts. Try again in " + LOCK_MIN + " minutes.", 429);
+  }
+  const row = await env.DB.prepare("SELECT id, name, email, role, created_at, pass_hash, pass_salt FROM users WHERE email = ?").bind(email).first();
+  // always hash, so response time does not reveal whether the email exists
+  const iter = row && row.pass_hash.indexOf(":") > 0 ? Number(row.pass_hash.split(":")[0]) : PBKDF2_ITER;
+  const h = await hashPassword(password, row ? row.pass_salt : "0".repeat(32), iter);
+  if (!row || !safeEqual(h, row.pass_hash)) {
+    const count = (lock ? lock.count : 0) + 1;
+    const until = count >= MAX_FAILS ? new Date(Date.now() + LOCK_MIN * 60000).toISOString() : null;
+    await env.DB.prepare(
+      "INSERT INTO login_failures (email, count, locked_until) VALUES (?,?,?) ON CONFLICT(email) DO UPDATE SET count = excluded.count, locked_until = excluded.locked_until"
+    ).bind(email, count >= MAX_FAILS ? 0 : count, until).run();
+    return fail("Invalid email or password.", 401);
+  }
+  await env.DB.prepare("DELETE FROM login_failures WHERE email = ?").bind(email).run();
+  await recordLogin(env, row.id, req);
+  const cookie = await createSession(env, row.id, url);
+  const user = { id: row.id, name: row.name, email: row.email, role: row.role, createdAt: row.created_at };
+  return json(await buildState(env, user), 200, { "set-cookie": cookie });
+}
+
+async function logout(req, env, url) {
+  const token = getCookie(req, "df_session");
+  if (token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
+  return json({ ok: true }, 200, { "set-cookie": sessionCookie("", url, 0) });
+}
+
+async function touch(env, userId) {
+  await env.DB.prepare("UPDATE users SET last_active = ? WHERE id = ?").bind(nowISO(), userId).run();
+}
+
+async function setModule(req, env, me) {
+  const b = await readBody(req);
+  if (!b || MODULE_IDS.indexOf(b.id) < 0) return fail("Unknown module.");
+  if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
+  // modules are no longer marked by hand: Completed is derived from completion + assessment score
+  return json({ ok: true, ignored: true });
+}
+
+/** A lesson page reports how much of it has been read. The server keeps the highest value per page. */
+async function paceReport(req, env, me) {
+  const b = await readBody(req);
+  if (!b || MODULE_IDS.indexOf(b.module) < 0) return fail("Unknown module.");
+  const page = String(b.page || "");
+  if (!/^[a-zA-Z0-9_-]{1,40}$/.test(page)) return fail("Invalid page.");
+  const pct = Math.round(Number(b.pct));
+  const total = Math.round(Number(b.total));
+  if (!(pct >= 0 && pct <= 100) || !(total >= 1 && total <= 200)) return fail("Invalid progress.");
+  if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
+  const row = await env.DB.prepare("SELECT pages FROM module_completion WHERE user_id = ? AND module_id = ?").bind(me.id, b.module).first();
+  let pages = {};
+  if (row) { try { pages = JSON.parse(row.pages || "{}"); } catch (e) {} }
+  if (pct > (Number(pages[page]) || 0)) pages[page] = pct;
+  await env.DB.prepare(
+    "INSERT INTO module_completion (user_id, module_id, pages, total, updated_at) VALUES (?,?,?,?,?) " +
+    "ON CONFLICT(user_id, module_id) DO UPDATE SET pages = excluded.pages, total = excluded.total, updated_at = excluded.updated_at"
+  ).bind(me.id, b.module, JSON.stringify(pages), total, nowISO()).run();
+  await touch(env, me.id);
+  return json({ ok: true });
+}
+
+async function upsertQuiz(env, userId, quiz, pct, passPct, t, edited) {
+  const passed = pct >= passPct ? 1 : 0;
+  if (edited) {
+    await env.DB.prepare(
+      "INSERT INTO quizzes (user_id, quiz_id, score, passed, at, edited_by_admin) VALUES (?,?,?,?,?,1) ON CONFLICT(user_id, quiz_id) DO UPDATE SET score=excluded.score, passed=excluded.passed, at=excluded.at, edited_by_admin=1"
+    ).bind(userId, quiz, pct, passed, t).run();
+  } else {
+    // keep the best score
+    await env.DB.prepare(
+      "INSERT INTO quizzes (user_id, quiz_id, score, passed, at, edited_by_admin) VALUES (?,?,?,?,?,0) ON CONFLICT(user_id, quiz_id) DO UPDATE SET score=excluded.score, passed=excluded.passed, at=excluded.at, edited_by_admin=0 WHERE excluded.score >= quizzes.score"
+    ).bind(userId, quiz, pct, passed, t).run();
+  }
+  return passed;
+}
+
+async function logQuiz(req, env, me) {
+  const b = await readBody(req);
+  if (!b || QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+  if (await gateBlocks(env, me)) return fail("Watch at least 50% of the About Us video first.", 403);
+  const total = Number(b.total) > 0 ? Math.min(Number(b.total), 1000) : 100;
+  const raw = Number(b.raw);
+  if (!(raw >= 0) || raw > total) return fail("Invalid score.");
+  if (me.role !== "admin") {
+    const pol = await env.DB.prepare("SELECT max_attempts FROM quiz_policy WHERE quiz_id = ?").bind(b.quiz).first();
+    if (pol && pol.max_attempts > 0) {
+      const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM attempts WHERE user_id = ? AND quiz_id = ? AND (source IS NULL OR source != 'admin-edit')").bind(me.id, b.quiz).first();
+      if (c.n >= pol.max_attempts) return fail("Attempt limit reached. Ask your trainer to reset your attempt.", 403);
+    }
+  }
+  const pct = Math.round((raw / total) * 100);
+  const passPct = await getPassPct(env);
+  const t = nowISO();
+  const passed = await upsertQuiz(env, me.id, b.quiz, pct, passPct, t, false);
+  const id = "a_" + randHex(8);
+  let extra = null;
+  if (b.extra && typeof b.extra === "object") { try { extra = clip(JSON.stringify(b.extra), 500); } catch (e) {} }
+  await env.DB.prepare("INSERT INTO attempts (id, user_id, quiz_id, score, raw, total, passed, at, source, extra) VALUES (?,?,?,?,?,?,?,?,NULL,?)")
+    .bind(id, me.id, b.quiz, pct, raw, total, passed, t, extra).run();
+  if (Array.isArray(b.answers) && b.answers.length) {
+    const ans = b.answers.slice(0, 100).map((a) => ({ q: clip(a && a.q, 300), p: a && a.p != null ? clip(a.p, 200) : null, c: clip(a && a.c, 200), ok: a && a.ok ? 1 : 0 }));
+    const js = JSON.stringify(ans);
+    if (js.length <= 24000) await env.DB.prepare("INSERT INTO attempt_answers (attempt_id, user_id, quiz_id, answers, at) VALUES (?,?,?,?,?)").bind(id, me.id, b.quiz, js, t).run();
+  }
+  // keep at most 200 attempts per user
+  await env.DB.prepare("DELETE FROM attempts WHERE user_id = ? AND id NOT IN (SELECT id FROM attempts WHERE user_id = ? ORDER BY at DESC LIMIT 200)")
+    .bind(me.id, me.id).run();
+  await touch(env, me.id);
+  return json({ ok: true, passed: !!passed, score: pct });
+}
+
+async function logUsage(req, env, me) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  const page = clip(b.page, 120);
+  if (b.kind === "view") {
+    await env.DB.prepare("INSERT INTO usage_events (user_id, kind, page, at) VALUES (?, 'view', ?, ?)").bind(me.id, page, nowISO()).run();
+    await env.DB.prepare("DELETE FROM usage_events WHERE user_id = ? AND kind='view' AND id NOT IN (SELECT id FROM usage_events WHERE user_id = ? AND kind='view' ORDER BY id DESC LIMIT 500)")
+      .bind(me.id, me.id).run();
+  } else if (b.kind === "dwell") {
+    const sec = Math.round(Number(b.sec));
+    if (!(sec > 0 && sec <= 4 * 3600)) return fail("Invalid duration.");
+    await env.DB.prepare("INSERT INTO usage_events (user_id, kind, page, sec, at) VALUES (?, 'dwell', ?, ?, ?)").bind(me.id, page, sec, nowISO()).run();
+  } else return fail("Unknown usage kind.");
+  await touch(env, me.id);
+  return json({ ok: true });
+}
+
+/* About Us heartbeat. The browser reports the video position every few seconds; the SERVER decides what counts:
+ * only in-order playback at normal speed (position advancing no faster than the wall clock) earns coverage,
+ * jumps ahead / fast-forward earn nothing and are counted as skips, and time on the page accrues only while
+ * the tab is visible. Completion needs ~all of the video covered + the video finished + the minimum page time. */
+async function aboutBeat(req, env, me) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  const pos = Number(b.pos), dur = Number(b.duration);
+  if (!(pos >= 0) || !(dur > 0) || dur > ABOUT_MAX_DURATION) return fail("Invalid video data.");
+  const cfg = await getAboutCfg(env);
+  const nowMs = Date.now();
+  const n = Math.ceil(dur);
+  const row = await env.DB.prepare("SELECT * FROM about_progress WHERE user_id = ?").bind(me.id).first();
+  if (row && row.completed_at) return json({ ok: true, about: aboutSummary(row, cfg) });
+
+  let cov = row && row.coverage ? row.coverage : "";
+  let pageSec = row ? row.page_sec : 0;
+  let viol = row ? row.violations : 0;
+  let ended = row ? row.ended : 0;
+  // a different video length means the video was replaced: start the coverage over
+  if (row && row.duration && Math.abs(row.duration - dur) > 2) { cov = ""; ended = 0; }
+  if (cov.length < n) cov = cov + "0".repeat(n - cov.length);
+  if (cov.length > n) cov = cov.slice(0, n);
+
+  const lastBeat = row && row.last_beat ? Date.parse(row.last_beat) : null;
+  const wall = lastBeat ? (nowMs - lastBeat) / 1000 : 0;
+  if (lastBeat && wall < 1.5) {
+    // a burst (e.g. the pause/leave beat right after a heartbeat): earns no credit, but remember where they are
+    // and whether they were playing, so "where I left off" is accurate. last_beat stays put, so timing is unaffected.
+    // Only accept it if it is not a jump ahead of normal-speed playback (otherwise a forged quick beat could
+    // move the baseline forward and the next heartbeat would credit the skipped part).
+    const playingNow = b.playing === true ? 1 : 0;
+    const forwardOk = row.last_pos === null || row.last_pos === undefined || pos - row.last_pos <= wall * 1.15 + 0.75;
+    const keepPos = forwardOk ? pos : row.last_pos;
+    const keepPlaying = forwardOk ? playingNow : row.last_playing;
+    if (forwardOk) await env.DB.prepare("UPDATE about_progress SET last_pos = ?, last_playing = ? WHERE user_id = ?").bind(pos, playingNow, me.id).run();
+    return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: null, last_pos: keepPos, last_playing: keepPlaying, ended }, cfg) });
+  }
+
+  if (lastBeat && wall <= BEAT_MAX_WALL && b.visible === true) pageSec += wall;
+
+  const lastPos = row && row.last_pos !== null && row.last_pos !== undefined ? row.last_pos : null;
+  if (lastBeat && lastPos !== null && wall <= COVER_MAX_WALL && row.last_playing && b.playing === true && Number(b.rate) === 1) {
+    const d = pos - lastPos;
+    if (d > 0 && d <= wall * 1.15 + 0.75) {
+      const chars = cov.split("");
+      for (let sec = Math.floor(lastPos); sec < Math.floor(pos) && sec < n; sec++) { if (sec >= 0) chars[sec] = "1"; }
+      cov = chars.join("");
+    } else if (d > wall * 1.5 + 3) {
+      viol++; // jumped ahead or fast-forwarded: no credit
+    }
+  }
+  if (b.ended === true && pos >= dur - 2) ended = 1;
+
+  const covered = countOnes(cov);
+  let completedAt = null;
+  if (covered >= Math.ceil(n * ABOUT_COVER_NEED) && ended && pageSec >= cfg.minSec) completedAt = nowISO();
+
+  await env.DB.prepare(
+    "INSERT INTO about_progress (user_id, coverage, page_sec, last_pos, last_beat, last_playing, duration, ended, violations, completed_at) VALUES (?,?,?,?,?,?,?,?,?,?) " +
+    "ON CONFLICT(user_id) DO UPDATE SET coverage=excluded.coverage, page_sec=excluded.page_sec, last_pos=excluded.last_pos, last_beat=excluded.last_beat, " +
+    "last_playing=excluded.last_playing, duration=excluded.duration, ended=excluded.ended, violations=excluded.violations, completed_at=excluded.completed_at"
+  ).bind(me.id, cov, pageSec, pos, new Date(nowMs).toISOString(), b.playing === true ? 1 : 0, dur, ended, viol, completedAt).run();
+  if (completedAt) await touch(env, me.id);
+  return json({ ok: true, about: aboutSummary({ coverage: cov, page_sec: pageSec, duration: dur, violations: viol, completed_at: completedAt, last_pos: pos, last_playing: b.playing === true ? 1 : 0, ended }, cfg) });
+}
+
+/* ---------- admin ---------- */
+async function adminUsers(env) {
+  const passPct = await getPassPct(env);
+  const { results } = await env.DB.prepare(
+    `SELECT u.id, u.name, u.email, u.role, u.created_at, u.logins, u.last_active,
+       (SELECT COUNT(*) FROM attempts a WHERE a.user_id = u.id) AS attempts,
+       (SELECT MAX(score) FROM quizzes q WHERE q.user_id = u.id) AS best,
+       (SELECT completed_at FROM about_progress a WHERE a.user_id = u.id) AS about_done
+     FROM users u ORDER BY u.created_at`
+  ).all();
+  const [cRows, qRows] = await env.DB.batch([
+    env.DB.prepare("SELECT user_id, module_id, pages, total, updated_at FROM module_completion"),
+    env.DB.prepare("SELECT user_id, quiz_id, score FROM quizzes")
+  ]);
+  const comps = {}, scores = {};
+  cRows.results.forEach((c) => { (comps[c.user_id] = comps[c.user_id] || {})[c.module_id] = completionOf(c); });
+  qRows.results.forEach((q) => { (scores[q.user_id] = scores[q.user_id] || {})[q.quiz_id] = q.score; });
+  const doneFor = (uid) => MODULE_IDS.filter((m) => moduleCompleted(m, (comps[uid] || {})[m], (scores[uid] || {})[MODULE_QUIZ[m]], passPct));
+  return json(results.map((r) => ({
+    id: r.id, name: r.name, email: r.email, role: r.role, createdAt: r.created_at,
+    logins: r.logins, lastActive: r.last_active, modulesDone: doneFor(r.id).filter((m) => REQUIRED_MODULES.indexOf(m) >= 0).length + "/" + REQUIRED_MODULES.length,
+    attempts: r.attempts, best: r.best, aboutDone: !!r.about_done, certified: REQUIRED_MODULES.every((m) => doneFor(r.id).indexOf(m) >= 0)
+  })));
+}
+
+async function adminUser(env, url) {
+  const id = url.searchParams.get("id") || "";
+  const u = await env.DB.prepare("SELECT id, name, email, role, created_at FROM users WHERE id = ?").bind(id).first();
+  if (!u) return fail("Not found.", 404);
+  const passPct = await getPassPct(env);
+  const data = await buildUserData(env, id);
+  return json({
+    user: { id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.created_at },
+    ...data, certified: isCertified(data.progress)
+  });
+}
+
+/** Everything the Trainer's Guide panel needs for one module: guide text, trainees' results and answers, question analytics, notes, attempt limit. */
+async function adminModule(env, url) {
+  const m = url.searchParams.get("m") || "";
+  if (MODULE_IDS.indexOf(m) < 0) return fail("Unknown module.");
+  const quiz = MODULE_QUIZ[m];
+  const g = await env.DB.prepare("SELECT instructions, tools, updated_at, updated_by FROM guides WHERE module_id = ?").bind(m).first();
+  const guide = g ? { instructions: g.instructions, tools: g.tools, updatedAt: g.updated_at, updatedBy: g.updated_by } : { instructions: DEFAULT_GUIDES[m].instructions, tools: DEFAULT_GUIDES[m].tools, isDefault: true };
+  const users = (await env.DB.prepare("SELECT id, name, email FROM users WHERE role = 'user' ORDER BY name").all()).results;
+  const [comp, notes, polRow, att] = await env.DB.batch([
+    env.DB.prepare("SELECT user_id, pages, total, updated_at FROM module_completion WHERE module_id = ?").bind(m),
+    env.DB.prepare("SELECT id, user_id, note, author, at FROM trainer_notes WHERE module_id = ? ORDER BY at DESC LIMIT 500").bind(m),
+    env.DB.prepare("SELECT max_attempts FROM quiz_policy WHERE quiz_id = ?").bind(quiz || ""),
+    env.DB.prepare(`SELECT a.id, a.user_id, a.score, a.raw, a.total, a.passed, a.at, a.source, x.answers FROM attempts a
+      JOIN users u ON u.id = a.user_id AND u.role = 'user' LEFT JOIN attempt_answers x ON x.attempt_id = a.id WHERE a.quiz_id = ? ORDER BY a.at`).bind(quiz || "")
+  ]);
+  const compBy = {}; comp.results.forEach((c) => { compBy[c.user_id] = completionOf(c).pct; });
+  const byUser = {}, qa = {}, seen = {};
+  att.results.forEach((a) => {
+    let answers = null; try { answers = a.answers ? JSON.parse(a.answers) : null; } catch (e) {}
+    (byUser[a.user_id] = byUser[a.user_id] || []).push({ id: a.id, at: a.at, score: a.score, raw: a.raw, total: a.total, passed: !!a.passed, source: a.source, answers });
+    if (answers) {
+      const first = !seen[a.user_id]; seen[a.user_id] = 1;
+      answers.forEach((x) => {
+        const o = qa[x.q] || (qa[x.q] = { q: x.q, n: 0, right: 0, fn: 0, fr: 0, wrong: {} });
+        o.n++; if (x.ok) o.right++; else if (x.p != null) o.wrong[x.p] = (o.wrong[x.p] || 0) + 1;
+        if (first) { o.fn++; if (x.ok) o.fr++; }
+      });
+    }
+  });
+  const analytics = Object.values(qa).map((o) => {
+    const top = Object.entries(o.wrong).sort((a, b) => b[1] - a[1])[0];
+    return { q: o.q, n: o.n, pct: Math.round((o.right / o.n) * 100), firstPct: o.fn ? Math.round((o.fr / o.fn) * 100) : null, topWrong: top ? { a: top[0], n: top[1] } : null };
+  }).sort((a, b) => a.pct - b.pct);
+  return json({
+    module: m, quiz, guide, passPct: await getPassPct(env), maxAttempts: polRow.results[0] ? polRow.results[0].max_attempts : 0,
+    trainees: users.map((u) => ({ id: u.id, name: u.name, email: u.email, completion: compBy[u.id] || 0, attempts: byUser[u.id] || [] })),
+    analytics, notes: notes.results.map((n) => ({ id: n.id, userId: n.user_id, note: n.note, author: n.author, at: n.at }))
+  });
+}
+
+async function adminCountOtherAdmins(env, id) {
+  const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role='admin' AND id != ?").bind(id).first();
+  return r.n;
+}
+
+async function adminAction(action, req, env, me) {
+  const b = await readBody(req);
+  if (!b) return fail("Invalid request.");
+  if (action === "settings") {
+    const up = "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value";
+    if (b.passPct !== undefined) {
+      const v = Math.round(Number(b.passPct));
+      if (!(v >= 1 && v <= 100)) return fail("Pass mark must be 1-100.");
+      await env.DB.prepare(up).bind("passPct", String(v)).run();
+    }
+    if (b.aboutGate !== undefined) await env.DB.prepare(up).bind("aboutGate", b.aboutGate ? "1" : "0").run();
+    if (b.aboutMinSec !== undefined) {
+      const m = Math.round(Number(b.aboutMinSec));
+      if (!(m >= 30 && m <= 3600)) return fail("Minimum About Us time must be between 30 seconds and 60 minutes.");
+      await env.DB.prepare(up).bind("aboutMinSec", String(m)).run();
+    }
+    return json({ ok: true });
+  }
+  if (action === "create") {
+    const r = await createUserRecord(env, { name: b.name, email: b.email, password: b.password, role: b.role === "admin" ? "admin" : "user" });
+    if (r.error) return fail(r.error, r.status);
+    return json({ ok: true, user: r.user });
+  }
+  if (action === "guide") {
+    if (MODULE_IDS.indexOf(b.module) < 0) return fail("Unknown module.");
+    await env.DB.prepare("INSERT INTO guides (module_id, instructions, tools, updated_at, updated_by) VALUES (?,?,?,?,?) ON CONFLICT(module_id) DO UPDATE SET instructions = excluded.instructions, tools = excluded.tools, updated_at = excluded.updated_at, updated_by = excluded.updated_by")
+      .bind(b.module, clip(b.instructions, 8000), clip(b.tools, 8000), nowISO(), me.name).run();
+    return json({ ok: true });
+  }
+  if (action === "quizpolicy") {
+    if (QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+    const n = Math.round(Number(b.maxAttempts));
+    if (!(n >= 0 && n <= 20)) return fail("Attempts must be 0-20 (0 = unlimited).");
+    await env.DB.prepare("INSERT INTO quiz_policy (quiz_id, max_attempts) VALUES (?,?) ON CONFLICT(quiz_id) DO UPDATE SET max_attempts = excluded.max_attempts").bind(b.quiz, n).run();
+    return json({ ok: true });
+  }
+  if (action === "note") {
+    const note = clip(b.note, 2000).trim();
+    if (!note || MODULE_IDS.indexOf(b.module) < 0) return fail("Write a note first.");
+    const u = await env.DB.prepare("SELECT 1 AS x FROM users WHERE id = ?").bind(String(b.userId || "")).first();
+    if (!u) return fail("Not found.", 404);
+    await env.DB.prepare("INSERT INTO trainer_notes (id, user_id, module_id, note, author, at) VALUES (?,?,?,?,?,?)").bind("n_" + randHex(8), b.userId, b.module, note, me.name, nowISO()).run();
+    return json({ ok: true });
+  }
+  if (action === "notedelete") {
+    await env.DB.prepare("DELETE FROM trainer_notes WHERE id = ?").bind(String(b.id || "")).run();
+    return json({ ok: true });
+  }
+  const id = String(b.id || "");
+  const target = await env.DB.prepare("SELECT id, role FROM users WHERE id = ?").bind(id).first();
+  if (!target) return fail("Not found.", 404);
+
+  if (action === "role") {
+    if (b.role !== "admin" && b.role !== "user") return fail("Bad role.");
+    if (target.role === "admin" && b.role === "user" && (await adminCountOtherAdmins(env, id)) === 0) {
+      return fail("Cannot remove the last admin.");
+    }
+    await env.DB.prepare("UPDATE users SET role = ? WHERE id = ?").bind(b.role, id).run();
+    return json({ ok: true });
+  }
+  if (action === "password") {
+    // nobody may change their own login; another admin resets it
+    if (id === me.id) return fail("You cannot change your own login. Ask another admin.", 403);
+    const pw = String(b.password || "");
+    if (pw.length < MIN_PASSWORD || pw.length > 200) return fail("Password must be at least " + MIN_PASSWORD + " characters.");
+    const salt = randHex(16);
+    const hash = await hashPassword(pw, salt);
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET pass_hash = ?, pass_salt = ? WHERE id = ?").bind(hash, salt, id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id)
+    ]);
+    return json({ ok: true });
+  }
+  if (action === "attemptreset") {
+    // lets the trainee take this quiz again: clears their attempts, answers and best score for it (reading progress is kept)
+    if (QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM attempt_answers WHERE user_id = ? AND quiz_id = ?").bind(id, b.quiz),
+      env.DB.prepare("DELETE FROM attempts WHERE user_id = ? AND quiz_id = ?").bind(id, b.quiz),
+      env.DB.prepare("DELETE FROM quizzes WHERE user_id = ? AND quiz_id = ?").bind(id, b.quiz)
+    ]);
+    return json({ ok: true });
+  }
+  if (action === "aboutreset") {
+    await env.DB.prepare("DELETE FROM about_progress WHERE user_id = ?").bind(id).run();
+    return json({ ok: true });
+  }
+  if (action === "reset") {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM certificates WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM attempt_answers WHERE user_id = ?").bind(id)
+    ]);
+    return json({ ok: true });
+  }
+  if (action === "score") {
+    if (QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+    const score = Math.max(0, Math.min(100, Math.round(Number(b.score))));
+    if (!(score >= 0)) return fail("Invalid score.");
+    const passPct = await getPassPct(env);
+    const t = nowISO();
+    const passed = await upsertQuiz(env, id, b.quiz, score, passPct, t, true);
+    await env.DB.prepare("INSERT INTO attempts (id, user_id, quiz_id, score, raw, total, passed, at, source, extra) VALUES (?,?,?,?,?,100,?,?,'admin-edit',NULL)")
+      .bind("a_" + randHex(8), id, b.quiz, score, score, passed, t).run();
+    return json({ ok: true });
+  }
+  if (action === "delete") {
+    if (id === me.id) return fail("Cannot delete yourself.");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM progress WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM certificates WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM usage_events WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM about_progress WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM attempt_answers WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM trainer_notes WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id)
+    ]);
+    return json({ ok: true });
+  }
+  return fail("Not found.", 404);
+}
+
+/* ---------- entry ---------- */
+export async function onRequest(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const route = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
+  const method = request.method;
+
+  if (!env.DB) return fail("Database is not configured (missing D1 binding 'DB').", 500);
+
+  // CSRF defence: state-changing requests must be same-origin JSON
+  if (method !== "GET" && method !== "HEAD") {
+    const origin = request.headers.get("origin");
+    if (origin && origin !== url.origin) return fail("Forbidden.", 403);
+    if (!(request.headers.get("content-type") || "").includes("application/json")) return fail("Unsupported media type.", 415);
+  }
+
+  try {
+    if (method === "GET" && route === "state") {
+      return json(await buildState(env, await currentUser(request, env)));
+    }
+    if (method === "POST" && route === "signup") return await signup(request, env, url);
+    if (method === "POST" && route === "login") return await login(request, env, url);
+    if (method === "POST" && route === "logout") return await logout(request, env, url);
+
+    // everything below needs a valid session
+    const me = await currentUser(request, env);
+    if (!me) return fail("Not signed in.", 401);
+
+    if (method === "POST" && route === "module") return await setModule(request, env, me);
+    if (method === "POST" && route === "pace") return await paceReport(request, env, me);
+    if (method === "POST" && route === "certificate") {
+      const data = await buildUserData(env, me.id);
+      return json({ certificate: await issueCertificate(env, me, data) });
+    }
+    if (method === "POST" && route === "quiz") return await logQuiz(request, env, me);
+    if (method === "POST" && route === "usage") return await logUsage(request, env, me);
+    if (method === "POST" && route === "about/beat") return await aboutBeat(request, env, me);
+
+    if (route.indexOf("admin/") === 0) {
+      if (me.role !== "admin") return fail("Admin only.", 403);
+      const action = route.slice(6);
+      if (method === "GET" && action === "users") return await adminUsers(env);
+      if (method === "GET" && action === "user") return await adminUser(env, url);
+      if (method === "GET" && action === "module") return await adminModule(env, url);
+      if (method === "POST") return await adminAction(action, request, env, me);
+    }
+    return fail("Not found.", 404);
+  } catch (e) {
+    return fail("Server error.", 500);
+  }
+}

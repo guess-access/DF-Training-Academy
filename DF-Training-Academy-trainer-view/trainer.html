@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Trainer View — Dealerfocus Training Academy</title>
+<link rel="stylesheet" href="style.css">
+<script src="auth.js"></script>
+<style>
+.sec-nav{color:#fcf8f8 !important;background-color:#050141 !important}
+.tv{max-width:1500px;margin:0 auto;padding:20px 24px 60px}
+.tv-top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
+.tv-top h1{font-size:24px;margin:0 12px 0 0}
+.tv select,.tv textarea,.tv input{font:inherit;padding:8px 10px;border:1px solid #c9ccd6;border-radius:8px;background:#fff;color:#111}
+.tv button{font:inherit;font-weight:700;cursor:pointer;border-radius:8px;border:1px solid #050141;background:#fff;color:#050141;padding:8px 14px}
+.tv button.on,.tv button.pri{background:#050141;color:#fff}
+.tv button.danger{border-color:#b42318;color:#b42318}
+.tv button.sm{padding:4px 10px;font-size:12.5px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.panels{display:block}
+.panels.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.panel{border:1px solid #d5d8e2;border-radius:14px;background:#fff;overflow:hidden}
+.panel>h2{margin:0;padding:12px 18px;background:#050141;color:#fff;font-size:16px}
+.panel .body{padding:16px 18px}
+.hidden{display:none !important}
+.subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.subnav button{border-color:#c9ccd6;font-size:13px;padding:6px 12px}
+.subnav button.on{border-color:#050141}
+.tv table{width:100%;border-collapse:collapse;font-size:13.5px}
+.tv th,.tv td{text-align:left;padding:8px 10px;border-bottom:1px solid #e6e8ef;vertical-align:top}
+.tv th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#555}
+.tbl{overflow-x:auto}
+.txt{line-height:1.6;white-space:normal}
+.muted{color:#667085;font-size:13px}
+.ok{color:#16834b;font-weight:700}.bad{color:#b42318;font-weight:700}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#eef0f6}
+.pill.pass{background:#d9f5e5;color:#0a5c32}.pill.fail{background:#fde4e1;color:#9a1c10}
+.banner{background:#fff4d6;border-bottom:1px solid #ecd58a;padding:8px 18px;font-size:13px;font-weight:600}
+#fr{width:100%;height:78vh;border:0;display:block}
+details{border:1px solid #e6e8ef;border-radius:8px;margin:6px 0;padding:6px 10px}
+summary{cursor:pointer;font-weight:600}
+.q{padding:6px 0;border-bottom:1px dashed #e6e8ef}
+.note{border:1px solid #e6e8ef;border-radius:8px;padding:8px 12px;margin:8px 0}
+@media(max-width:1100px){.panels.split{display:block}#splitBtn{display:none}}
+</style>
+</head>
+<body>
+<header class="site-header sec-nav">
+  <a class="brand" href="/"><img src="assets/logo-dealerfocus.png" alt="Dealerfocus Training Academy logo"><span>Dealerfocus Training Academy</span></a>
+  <nav class="site-nav"><a href="/">Home</a><a href="/about-us">About Us</a><a href="/modules">Modules</a></nav>
+</header>
+<main class="tv">
+  <div class="tv-top">
+    <h1>Trainer View</h1>
+    <select id="mod" aria-label="Module"></select>
+    <div class="tabs">
+      <button type="button" id="tG" class="on">Trainer's Guide</button>
+      <button type="button" id="tM">Trainee's Module</button>
+      <button type="button" id="splitBtn">Side by side</button>
+    </div>
+  </div>
+  <div class="panels" id="panels">
+    <section class="panel" id="pG"><h2>Panel 1 · Trainer's Guide</h2><div class="body">
+      <div class="subnav" id="subnav"></div><div id="gbody">Loading…</div></div></section>
+    <section class="panel hidden" id="pM"><h2>Panel 2 · Trainee's Module</h2>
+      <div class="banner">Preview as Trainee: this is what trainees see. Nothing you do here is recorded.</div>
+      <iframe id="fr" title="Trainee's Module"></iframe></section>
+  </div>
+</main>
+<script>
+(function () {
+  var SUBS = [["instr", "Instructions"], ["tools", "Tools"], ["key", "Answer Key"], ["res", "Results & Answers"], ["ana", "Question Analytics"], ["notes", "Trainer's Notes"], ["set", "Quiz Settings"]];
+  var KEYSRC = { m1: "module-01-usa-interactive-training.html", m4: "csr_fundamentals.html", m5: "module-05-certification.html" };
+  var M = "m1", D = null, KEY = null, sub = "instr", editing = false, split = false, panel = "G";
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return DFAuth.esc(s); };
+  var when = function (t) { return t ? new Date(t).toLocaleString() : ""; };
+  function rich(s) { return esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\n/g, "<br>"); }
+  function nameOf(id) { var t = D.trainees.filter(function (x) { return x.id === id; })[0]; return t ? t.name : "(removed)"; }
+
+  function layout() {
+    var p = $("panels");
+    p.classList.toggle("split", split);
+    $("pG").classList.toggle("hidden", !split && panel !== "G");
+    $("pM").classList.toggle("hidden", !split && panel !== "M");
+    $("tG").classList.toggle("on", !split && panel === "G");
+    $("tM").classList.toggle("on", !split && panel === "M");
+    $("splitBtn").classList.toggle("on", split);
+  }
+  $("tG").onclick = function () { split = false; panel = "G"; layout(); };
+  $("tM").onclick = function () { split = false; panel = "M"; layout(); };
+  $("splitBtn").onclick = function () { split = !split; layout(); };
+
+  function renderSub() {
+    $("subnav").innerHTML = SUBS.map(function (s) { return '<button type="button" class="' + (s[0] === sub ? "on" : "") + '" data-s="' + s[0] + '">' + s[1] + "</button>"; }).join("");
+    Array.prototype.forEach.call($("subnav").querySelectorAll("button"), function (b) { b.onclick = function () { sub = b.getAttribute("data-s"); editing = false; renderSub(); renderBody(); }; });
+  }
+
+  function noQuiz(what) { return '<p class="muted">Module ' + M.slice(1) + " has no assessment, so there are no " + what + ".</p>"; }
+
+  function renderBody() {
+    var h = "";
+    if (sub === "instr" || sub === "tools") {
+      var f = sub === "instr" ? "instructions" : "tools";
+      if (editing) {
+        h = '<textarea id="ed" rows="12" style="width:100%">' + esc(D.guide[f]) + '</textarea><p><button class="pri" id="sv">Save</button> <button id="cn">Cancel</button></p>';
+      } else {
+        h = '<div class="txt">' + (D.guide[f] ? rich(D.guide[f]) : '<span class="muted">Nothing here yet.</span>') + "</div>" +
+          '<p><button class="sm" id="ee">Edit</button> <span class="muted">' + (D.guide.isDefault ? "Starting text: edit it to make it yours." : "Last saved " + when(D.guide.updatedAt) + " by " + esc(D.guide.updatedBy || "")) + "</span></p>";
+      }
+    } else if (sub === "key") {
+      if (!D.quiz) h = noQuiz("answers");
+      else if (KEY && KEY.length) {
+        h = '<p class="muted">Read live from the module, so it always matches what trainees see.</p>' + KEY.map(function (k, i) {
+          return '<div class="q"><strong>' + (i + 1) + ". " + esc(k.q) + "</strong><br>" + k.opts.map(function (o, j) { return (j === k.a ? '<span class="ok">✓ ' : "&nbsp;&nbsp;&nbsp;") + esc(o) + (j === k.a ? "</span>" : "") + "<br>"; }).join("") + "</div>";
+        }).join("");
+      } else h = '<p class="muted">This assessment is graded outside the site (Google Form), so its answer key lives in the form. Add a link under Tools.</p>';
+    } else if (sub === "res") {
+      h = '<p class="muted">Pass mark: ' + D.passPct + "%.</p>" + '<div class="tbl"><table><thead><tr><th>Trainee</th><th>Read</th>' + (D.quiz ? "<th>Attempts</th><th>Best</th><th>Latest answers</th>" : "") + "</tr></thead><tbody>" +
+        (D.trainees.map(function (t) {
+          var at = t.attempts.slice().reverse(), best = t.attempts.reduce(function (m, a) { return Math.max(m, a.score); }, -1);
+          var cells = "";
+          if (D.quiz) {
+            cells = "<td>" + t.attempts.length + (D.maxAttempts ? " / " + D.maxAttempts : "") + "</td><td>" + (best < 0 ? "—" : '<span class="pill ' + (best >= D.passPct ? "pass" : "fail") + '">' + best + "%</span>") + "</td><td>" +
+              (at.length ? at.map(function (a) {
+                return "<details><summary>" + when(a.at) + " · " + a.score + "% " + (a.source === "admin-edit" ? "(set by admin)" : "") + "</summary>" +
+                  (a.answers ? a.answers.map(function (x, i) { return '<div class="q">' + (i + 1) + ". " + esc(x.q) + "<br>" + (x.ok ? '<span class="ok">✓ ' + esc(x.p) + "</span>" : '<span class="bad">✗ ' + esc(x.p == null ? "No answer" : x.p) + "</span><br>Correct: " + esc(x.c)) + "</div>"; }).join("") : '<span class="muted">No per-question answers saved for this attempt.</span>') + "</details>";
+              }).join("") + '<button class="sm danger" data-r="' + t.id + '">Reset attempt</button>' : '<span class="muted">Not attempted</span>') + "</td>";
+          }
+          return "<tr><td>" + esc(t.name) + '<br><span class="muted">' + esc(t.email) + "</span></td><td>" + t.completion + "%</td>" + cells + "</tr>";
+        }).join("") || '<tr><td colspan="5" class="muted">No trainees yet.</td></tr>') + "</tbody></table></div>";
+    } else if (sub === "ana") {
+      if (!D.quiz) h = noQuiz("question analytics");
+      else if (!D.analytics.length) h = '<p class="muted">No per-question answers recorded yet. They appear once trainees submit this assessment.</p>';
+      else h = '<p class="muted">Hardest questions first. “First try” counts each trainee’s first attempt only.</p><div class="tbl"><table><thead><tr><th>Question</th><th>Answered</th><th>Correct</th><th>First try</th><th>Most chosen wrong answer</th></tr></thead><tbody>' +
+        D.analytics.map(function (a) { return "<tr><td>" + esc(a.q) + "</td><td>" + a.n + '</td><td class="' + (a.pct < D.passPct ? "bad" : "ok") + '">' + a.pct + "%</td><td>" + (a.firstPct == null ? "—" : a.firstPct + "%") + "</td><td>" + (a.topWrong ? esc(a.topWrong.a) + " (" + a.topWrong.n + ")" : "—") + "</td></tr>"; }).join("") + "</tbody></table></div>";
+    } else if (sub === "notes") {
+      h = '<p><select id="nu">' + D.trainees.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.name) + "</option>"; }).join("") + '</select></p><p><textarea id="nt" rows="3" style="width:100%" placeholder="Coaching note, only admins can see this"></textarea></p><p><button class="pri" id="na">Add note</button></p>' +
+        (D.notes.map(function (n) { return '<div class="note"><strong>' + esc(nameOf(n.userId)) + '</strong> <span class="muted">' + esc(n.author) + " · " + when(n.at) + '</span> <button class="sm danger" data-n="' + esc(n.id) + '" style="float:right">Delete</button><div class="txt">' + rich(n.note) + "</div></div>"; }).join("") || '<p class="muted">No notes for this module yet.</p>');
+    } else if (sub === "set") {
+      if (!D.quiz) h = noQuiz("settings");
+      else {
+        var opts = [[0, "Unlimited attempts"], [1, "One-time take"], [2, "2 attempts"], [3, "3 attempts"], [5, "5 attempts"]];
+        if (!opts.some(function (o) { return o[0] === D.maxAttempts; })) opts.push([D.maxAttempts, D.maxAttempts + " attempts"]);
+        h = '<p>Attempts allowed for this assessment:</p><p><select id="lim">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === D.maxAttempts ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + '</select> <button class="pri" id="sl">Save</button></p>' +
+          '<p class="muted">Enforced on the server. When a trainee is out of attempts, use Reset attempt under Results &amp; Answers to let them retake it. Pass mark is set on the Admin dashboard.</p>';
+      }
+    }
+    $("gbody").innerHTML = h;
+    bind();
+  }
+
+  function bind() {
+    var g = function (id) { return $(id); };
+    if (g("ee")) g("ee").onclick = function () { editing = true; renderBody(); };
+    if (g("cn")) g("cn").onclick = function () { editing = false; renderBody(); };
+    if (g("sv")) g("sv").onclick = async function () {
+      var v = g("ed").value, ins = sub === "instr" ? v : D.guide.instructions, tl = sub === "tools" ? v : D.guide.tools;
+      var r = await DFAuth.admin.saveGuide(M, ins, tl); if (r.error) { alert(r.error); return; }
+      editing = false; load(false);
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-r]"), function (b) {
+      b.onclick = async function () {
+        if (!confirm("Reset this trainee's attempts and score for this assessment so they can retake it?")) return;
+        var r = await DFAuth.admin.resetAttempt(b.getAttribute("data-r"), D.quiz); if (r.error) alert(r.error); else load(false);
+      };
+    });
+    if (g("na")) g("na").onclick = async function () {
+      var r = await DFAuth.admin.addNote(g("nu").value, M, g("nt").value); if (r.error) alert(r.error); else load(false);
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-n]"), function (b) {
+      b.onclick = async function () { if (confirm("Delete this note?")) { await DFAuth.admin.delNote(b.getAttribute("data-n")); load(false); } };
+    });
+    if (g("sl")) g("sl").onclick = async function () {
+      var r = await DFAuth.admin.setAttemptLimit(D.quiz, Number(g("lim").value)); if (r.error) alert(r.error); else { alert("Saved."); load(false); }
+    };
+  }
+
+  // The answer key is read from the module's own page so there is one source of truth.
+  function loadKey() {
+    KEY = null;
+    if (!KEYSRC[M]) return Promise.resolve();
+    return new Promise(function (done) {
+      var f = document.createElement("iframe"), tries = 0;
+      f.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden";
+      f.src = KEYSRC[M] + "?preview=1";
+      document.body.appendChild(f);
+      var t = setInterval(function () {
+        try { if (f.contentWindow.DFQuizDef) KEY = f.contentWindow.DFQuizDef.map(function (k) { return { q: k.q, opts: k.opts.slice(), a: k.a }; }); } catch (e) {}
+        if (KEY || ++tries > 40) { clearInterval(t); f.remove(); done(); }
+      }, 150);
+    });
+  }
+
+  async function load(full) {
+    var d = await DFAuth.admin.module(M);
+    if (d.error) { $("gbody").innerHTML = '<p class="bad">' + esc(d.error) + "</p>"; return; }
+    D = d;
+    if (full) {
+      var mod = DFAuth.MODULES.filter(function (x) { return x.id === M; })[0];
+      $("fr").src = mod.href + "?preview=1";
+      renderSub(); await loadKey();
+    }
+    renderBody();
+  }
+
+  DFAuth.onReady(function () {
+    var me = DFAuth.current();
+    if (!me || me.role !== "admin") return;
+    $("mod").innerHTML = DFAuth.MODULES.map(function (m) { return '<option value="' + m.id + '">' + esc(m.title) + "</option>"; }).join("");
+    var q = new URLSearchParams(location.search).get("module");
+    if (q && DFAuth.MODULES.some(function (m) { return m.id === q; })) { M = q; $("mod").value = q; }
+    $("mod").onchange = function () { M = $("mod").value; sub = "instr"; editing = false; load(true); };
+    layout(); load(true);
+  });
+})();
+</script>
+</body>
+</html>

@@ -70,9 +70,14 @@ summary{cursor:pointer;font-weight:600}
 </main>
 <script>
 (function () {
-  var SUBS = [["instr", "Instructions"], ["tools", "Tools"], ["key", "Answer Key"], ["res", "Results & Answers"], ["ana", "Question Analytics"], ["notes", "Trainer's Notes"], ["set", "Quiz Settings"]];
+  var SUBS_MOD = [["instr", "Instructions"], ["tools", "Tools"], ["key", "Answer Key"], ["res", "Results & Answers"], ["ana", "Question Analytics"], ["notes", "Trainer's Notes"], ["set", "Quiz Settings"]];
+  // About Us has no assessment: its guide shows each trainee's video and time progress instead
+  var SUBS_ABOUT = [["instr", "Instructions"], ["tools", "Tools"], ["res", "Trainee Progress"], ["notes", "Trainer's Notes"]];
+  var ABOUT = { id: "about", title: "About Us — Start here", href: "about-us.html" };
+  var PAGES = function () { return [ABOUT].concat(DFAuth.MODULES); };
+  var SUBS = SUBS_MOD;
   var KEYSRC = { m1: "module-01-usa-interactive-training.html", m4: "csr_fundamentals.html", m5: "module-05-certification.html" };
-  var M = "m1", D = null, KEY = null, sub = "instr", editing = false, split = false, panel = "G";
+  var M = "about", D = null, KEY = null, sub = "instr", editing = false, split = false, panel = "G";
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return DFAuth.esc(s); };
   var when = function (t) { return t ? new Date(t).toLocaleString() : ""; };
@@ -93,6 +98,7 @@ summary{cursor:pointer;font-weight:600}
   $("splitBtn").onclick = function () { split = !split; layout(); };
 
   function renderSub() {
+    SUBS = M === "about" ? SUBS_ABOUT : SUBS_MOD;
     $("subnav").innerHTML = SUBS.map(function (s) { return '<button type="button" class="' + (s[0] === sub ? "on" : "") + '" data-s="' + s[0] + '">' + s[1] + "</button>"; }).join("");
     Array.prototype.forEach.call($("subnav").querySelectorAll("button"), function (b) { b.onclick = function () { sub = b.getAttribute("data-s"); editing = false; renderSub(); renderBody(); }; });
   }
@@ -116,6 +122,15 @@ summary{cursor:pointer;font-weight:600}
           return '<div class="q"><strong>' + (i + 1) + ". " + esc(k.q) + "</strong><br>" + k.opts.map(function (o, j) { return (j === k.a ? '<span class="ok">✓ ' : "&nbsp;&nbsp;&nbsp;") + esc(o) + (j === k.a ? "</span>" : "") + "<br>"; }).join("") + "</div>";
         }).join("");
       } else h = '<p class="muted">This assessment is graded outside the site (Google Form), so its answer key lives in the form. Add a link under Tools.</p>';
+    } else if (sub === "res" && M === "about") {
+      var mins = function (sec) { var m = Math.floor(sec / 60), x = sec % 60; return m + ":" + (x < 10 ? "0" : "") + x; };
+      var done = D.trainees.filter(function (t) { return t.completed; }).length;
+      h = '<p class="muted">' + done + " of " + D.trainees.length + " trainees have completed About Us. Completion needs the whole video plus " + Math.round(D.minSec / 60) + " minutes on the page. The About Us gate is " + (D.gate ? "<b>on</b>" : "<b>off</b>") + " (Admin dashboard).</p>" +
+        '<div class="tbl"><table><thead><tr><th>Trainee</th><th>Status</th><th>Video watched</th><th>Time on page</th><th>Skip attempts</th><th>Completed on</th></tr></thead><tbody>' +
+        (D.trainees.map(function (t) {
+          var st = t.completed ? '<span class="pill pass">Completed</span>' : t.unlocked ? '<span class="pill">Module 1 unlocked</span>' : t.started ? '<span class="pill fail">In progress</span>' : '<span class="pill">Not started</span>';
+          return "<tr><td>" + esc(t.name) + '<br><span class="muted">' + esc(t.email) + "</span></td><td>" + st + "</td><td>" + t.videoPct + "%</td><td>" + mins(t.pageSec) + " / " + mins(D.minSec) + "</td><td" + (t.skips ? ' class="bad"' : "") + ">" + t.skips + "</td><td>" + (t.completedAt ? when(t.completedAt) : "—") + "</td></tr>";
+        }).join("") || '<tr><td colspan="6" class="muted">No trainees yet.</td></tr>') + "</tbody></table></div>";
     } else if (sub === "res") {
       h = '<p class="muted">Pass mark: ' + D.passPct + "%.</p>" + '<div class="tbl"><table><thead><tr><th>Trainee</th><th>Read</th>' + (D.quiz ? "<th>Attempts</th><th>Best</th><th>Latest answers</th>" : "") + "</tr></thead><tbody>" +
         (D.trainees.map(function (t) {
@@ -198,7 +213,7 @@ summary{cursor:pointer;font-weight:600}
     if (d.error) { $("gbody").innerHTML = '<p class="bad">' + esc(d.error) + "</p>"; return; }
     D = d;
     if (full) {
-      var mod = DFAuth.MODULES.filter(function (x) { return x.id === M; })[0];
+      var mod = PAGES().filter(function (x) { return x.id === M; })[0];
       $("fr").src = mod.href + "?preview=1";
       renderSub(); await loadKey();
     }
@@ -208,9 +223,9 @@ summary{cursor:pointer;font-weight:600}
   DFAuth.onReady(function () {
     var me = DFAuth.current();
     if (!me || me.role !== "admin") return;
-    $("mod").innerHTML = DFAuth.MODULES.map(function (m) { return '<option value="' + m.id + '">' + esc(m.title) + "</option>"; }).join("");
+    $("mod").innerHTML = PAGES().map(function (m) { return '<option value="' + m.id + '">' + esc(m.title) + "</option>"; }).join("");
     var q = new URLSearchParams(location.search).get("module");
-    if (q && DFAuth.MODULES.some(function (m) { return m.id === q; })) { M = q; $("mod").value = q; }
+    if (q && PAGES().some(function (m) { return m.id === q; })) { M = q; $("mod").value = q; }
     $("mod").onchange = function () { M = $("mod").value; sub = "instr"; editing = false; load(true); };
     layout(); load(true);
   });

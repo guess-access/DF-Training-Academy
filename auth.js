@@ -239,6 +239,7 @@
   /** About Us heartbeat (video position + visibility). The server decides what counts; see functions/api. */
   function aboutBeat(payload, keepalive) {
     if (!S.user) return Promise.resolve({ error: "Not signed in." });
+    if (previewOn()) return Promise.resolve({ ok: true, preview: true }); // Trainer view preview: nothing is recorded
     return api("POST", "about/beat", payload, !!keepalive).then(function (r) {
       if (r && r.about) S.about = r.about;
       return r;

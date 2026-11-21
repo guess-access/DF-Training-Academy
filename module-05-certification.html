@@ -71,11 +71,25 @@
   </a>
   <nav class="site-nav"><a class href='/'>Home</a><a class href='/about-us'>About Us</a><a class href='/modules'>Modules</a></nav>
 </header>
-<main class="page-main">
-  <a class='back-link' href='/modules'>&larr; Back to Modules</a>
-  <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 05</p>
-  <h1 class="sec-headings">Certification</h1>
-  <div class="body-text sec-content">Track your progress toward graduation. Complete all required modules and pass the final assessment to earn your Graduation Certificate.</div>
+<main class="page-main ml-page">
+  <section class="ml-hero">
+    <div class="ml-hero-text">
+      <p class="ml-kicker">Module 05</p>
+      <h1 class="sec-headings">Certification</h1>
+      <p class="ml-sub">Final Assessment • Graduation Certificate</p>
+      <a class="ml-back" href="/modules">&larr; Back to Modules Tab</a>
+    </div>
+    <div class="ml-track" id="dfTrackSlot"></div>
+  </section>
+  <section class="ml-card">
+    <h2>Welcome to Module 5</h2>
+    <p class="ml-desc">Track your progress toward graduation. Complete all required modules and pass the final assessment to earn your Graduation Certificate.</p>
+    <ol class="ml-lessons">
+      <li><strong>Required Modules</strong> — Modules 1 to 4 must be Completed first. They are marked automatically when you finish them.</li>
+      <li><strong>Final Written Assessment</strong> — Written knowledge check covering vehicle basics, recalls, geography, systems, and policy from Modules 1–4.</li>
+    </ol>
+    <div class="ml-actions"><a class="ml-start" href="#certApp" onclick="event.preventDefault();document.getElementById('certApp').scrollIntoView({behavior:'smooth'})">Start Training &rarr;</a></div>
+  </section>
 
   <div class="cert-app" id="certApp">
 

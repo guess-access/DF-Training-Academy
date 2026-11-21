@@ -37,20 +37,29 @@ body.csr-modal-open{overflow:hidden;}
   </a>
   <nav class="site-nav"><a class href='/'>Home</a><a class href='/about-us'>About Us</a><a class href='/modules'>Modules</a></nav>
 </header>
-<main class="page-main">
-  <a class='back-link' href='/modules'>&larr; Back to Modules</a>
-  <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 04</p>
-  <h1 class="sec-headings">CSR Fundamentals</h1>
-  <div class="body-text sec-content">The core skills and standards every customer service rep is expected to master.</div>
-  <ol class="sub-list">
-    <li><strong>CSR Excellence Training</strong> — Set the foundation for delivering a great customer experience on every call.</li>
-    <li><strong>Handling Difficult Customers</strong> — Practical de-escalation and problem-solving techniques.</li>
-    <li><strong>DealerFocus Call Flow & Script</strong> — Learn the standard call structure and approved scripting.</li>
-    <li><strong>Dealership Systems & Policy</strong> — Review the policies reps must follow while on calls.</li>
-    <li><strong>Call Quality Assurance</strong> — Understand how calls are scored and what quality assurance looks for.</li>
-  </ol>
-  <p class="cert-note">Call Certification Prerequisites</p>
-  <a class='cta-button' href='/csr_fundamentals' onclick='openCSRModule(event)' style='margin-top:14px;'>Open CSR Fundamentals Module</a>
+<main class="page-main ml-page">
+  <section class="ml-hero">
+    <div class="ml-hero-text">
+      <p class="ml-kicker">Module 04</p>
+      <h1 class="sec-headings">CSR Fundamentals</h1>
+      <p class="ml-sub">Interactive Training • Calls, Customers &amp; Quality</p>
+      <a class="ml-back" href="/modules">&larr; Back to Modules Tab</a>
+    </div>
+    <div class="ml-track" id="dfTrackSlot"></div>
+  </section>
+  <section class="ml-card">
+    <h2>Welcome to Module 4</h2>
+    <p class="ml-desc">The core skills and standards every customer service rep is expected to master.</p>
+    <ol class="ml-lessons">
+      <li><strong>CSR Excellence Training</strong> — Set the foundation for delivering a great customer experience on every call.</li>
+      <li><strong>Handling Difficult Customers</strong> — Practical de-escalation and problem-solving techniques.</li>
+      <li><strong>DealerFocus Call Flow & Script</strong> — Learn the standard call structure and approved scripting.</li>
+      <li><strong>Dealership Systems & Policy</strong> — Review the policies reps must follow while on calls.</li>
+      <li><strong>Call Quality Assurance</strong> — Understand how calls are scored and what quality assurance looks for.</li>
+    </ol>
+    <p class="ml-note">Call Certification Prerequisites</p>
+    <div class="ml-actions"><a class="ml-start" href="/csr_fundamentals" onclick="openCSRModule(event)">Start Training &rarr;</a></div>
+  </section>
 
   <div id="csrModuleModal" class="csr-modal" aria-hidden="true">
     <div class="csr-modal-backdrop" onclick="closeCSRModule()"></div>

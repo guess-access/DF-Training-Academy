@@ -42,6 +42,21 @@ details{border:1px solid #e6e8ef;border-radius:8px;margin:6px 0;padding:6px 10px
 summary{cursor:pointer;font-weight:600}
 .q{padding:6px 0;border-bottom:1px dashed #e6e8ef}
 .note{border:1px solid #e6e8ef;border-radius:8px;padding:8px 12px;margin:8px 0}
+/* Side by side: use the full screen width and a tighter, compact guide panel */
+.tv.wide{max-width:none;padding:14px 16px 40px}
+.tv.wide .panels.split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.tv.wide .panel .body{padding:12px 14px}
+.tv.wide .panel>h2{padding:10px 14px}
+.tv.wide table{font-size:12.5px}
+.tv.wide th,.tv.wide td{padding:6px 7px}
+.tv.wide th{font-size:10.5px;letter-spacing:.02em;white-space:nowrap}
+.tv.wide .subnav button{padding:5px 10px;font-size:12.5px}
+.tv.wide #fr{height:calc(100vh - 210px);min-height:560px}
+.nw,.tv.wide .pill{white-space:nowrap}
+.sec-h{font-weight:800;margin:14px 0 4px;color:#050141}
+.sec-h:first-child{margin-top:0}
+.sug{color:#475467}
+.sug-tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;background:#efe7ff;color:#5b21b6;border-radius:999px;padding:1px 8px;margin-right:4px}
 @media(max-width:1100px){.panels.split{display:block}#splitBtn{display:none}}
 </style>
 </head>
@@ -77,16 +92,39 @@ summary{cursor:pointer;font-weight:600}
   var PAGES = function () { return [ABOUT].concat(DFAuth.MODULES); };
   var SUBS = SUBS_MOD;
   var KEYSRC = { m1: "module-01-usa-interactive-training.html", m4: "csr_fundamentals.html", m5: "module-05-certification.html" };
-  var M = "about", D = null, KEY = null, sub = "instr", editing = false, split = false, panel = "G";
+  var M = "about", D = null, KEY = null, sub = "instr", editing = false, split = window.matchMedia("(min-width:1101px)").matches, panel = "G";
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return DFAuth.esc(s); };
   var when = function (t) { return t ? new Date(t).toLocaleString() : ""; };
   function rich(s) { return esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>').replace(/\n/g, "<br>"); }
+  // Instructions always show four sections. Saved text is split on heading lines; older wording is matched too
+  // ("Instructions:", "How it works for trainees:", "What to check:"). A missing section shows the suggested text.
+  var SECS = [
+    ["goal", "Goal", /^goal\b/i],
+    ["talk", "Trainer's Talking Points", /^(trainer'?s?\s+)?talking\s+points\b|^what\s+to\s+check\b/i],
+    ["inst", "Trainee's Instructions", /^(trainee'?s?\s+)?instructions\b|^how\s+it\s+works\s+for\s+trainees\b/i],
+    ["follow", "Suggested Follow-up / Activity", /^suggested\s+follow[\s-]*up\b|^follow[\s-]*up\b|^suggested\s+activity\b|^activity\b/i]
+  ];
+  function parseSecs(text) {
+    var out = { goal: "", talk: "", inst: "", follow: "" }, cur = null, extra = [];
+    String(text || "").split("\n").forEach(function (line) {
+      var t = line.trim(), hit = null;
+      SECS.forEach(function (sx) { if (!hit && sx[2].test(t)) { var m = t.match(/^[^:]*:\s*(.*)$/); if (m || t.length < 45) hit = { k: sx[0], rest: m ? m[1] : "" }; } });
+      if (hit) { cur = hit.k; if (hit.rest) out[cur] += (out[cur] ? "\n" : "") + hit.rest; }
+      else if (cur) out[cur] += (out[cur] || t ? "\n" : "") + line;
+      else if (t) extra.push(line);
+    });
+    Object.keys(out).forEach(function (k) { out[k] = out[k].replace(/^\s+|\s+$/g, ""); });
+    if (extra.length) { var e = extra.join("\n").trim(); if (!out.goal) out.goal = e; else out.talk = (e + "\n" + out.talk).trim(); }
+    return out;
+  }
+  function joinSecs(o) { return SECS.map(function (sx) { return sx[1] + ":\n" + (o[sx[0]] || "").trim(); }).join("\n\n"); }
   function nameOf(id) { var t = D.trainees.filter(function (x) { return x.id === id; })[0]; return t ? t.name : "(removed)"; }
 
   function layout() {
     var p = $("panels");
     p.classList.toggle("split", split);
+    document.querySelector(".tv").classList.toggle("wide", split);
     $("pG").classList.toggle("hidden", !split && panel !== "G");
     $("pM").classList.toggle("hidden", !split && panel !== "M");
     $("tG").classList.toggle("on", !split && panel === "G");
@@ -107,7 +145,21 @@ summary{cursor:pointer;font-weight:600}
 
   function renderBody() {
     var h = "";
-    if (sub === "instr" || sub === "tools") {
+    if (sub === "instr") {
+      var cur = parseSecs(D.guide.instructions), sug = parseSecs(D.guide.suggested);
+      if (editing) {
+        h = SECS.map(function (sx) {
+          return '<p class="sec-h">' + sx[1] + '</p><textarea id="ed_' + sx[0] + '" rows="' + (sx[0] === "goal" ? 2 : 5) + '" style="width:100%">' + esc(cur[sx[0]] || sug[sx[0]] || "") + "</textarea>";
+        }).join("") + '<p><button class="pri" id="sv">Save</button> <button id="cn">Cancel</button></p>';
+      } else {
+        h = SECS.map(function (sx) {
+          var v = cur[sx[0]];
+          return '<p class="sec-h">' + sx[1] + "</p>" + (v ? '<div class="txt">' + rich(v) + "</div>" :
+            sug[sx[0]] ? '<div class="txt sug"><span class="sug-tag">Suggested</span> ' + rich(sug[sx[0]]) + "</div>" : '<div class="txt muted">Not written yet.</div>');
+        }).join("") +
+          '<p><button class="sm" id="ee">Edit</button> <span class="muted">' + (D.guide.isDefault ? "Starting text: edit it to make it yours." : "Last saved " + when(D.guide.updatedAt) + " by " + esc(D.guide.updatedBy || "") + (SECS.some(function (sx) { return !cur[sx[0]]; }) ? ". Sections marked Suggested are not saved yet: click Edit, then Save to keep them." : "")) + "</span></p>";
+      }
+    } else if (sub === "tools") {
       var f = sub === "instr" ? "instructions" : "tools";
       if (editing) {
         h = '<textarea id="ed" rows="12" style="width:100%">' + esc(D.guide[f]) + '</textarea><p><button class="pri" id="sv">Save</button> <button id="cn">Cancel</button></p>';
@@ -126,10 +178,10 @@ summary{cursor:pointer;font-weight:600}
       var mins = function (sec) { var m = Math.floor(sec / 60), x = sec % 60; return m + ":" + (x < 10 ? "0" : "") + x; };
       var done = D.trainees.filter(function (t) { return t.completed; }).length;
       h = '<p class="muted">' + done + " of " + D.trainees.length + " trainees have completed About Us. Completion needs the whole video plus " + Math.round(D.minSec / 60) + " minutes on the page. The About Us gate is " + (D.gate ? "<b>on</b>" : "<b>off</b>") + " (Admin dashboard).</p>" +
-        '<div class="tbl"><table><thead><tr><th>Trainee</th><th>Status</th><th>Video watched</th><th>Time on page</th><th>Skip attempts</th><th>Completed on</th></tr></thead><tbody>' +
+        '<div class="tbl"><table><thead><tr><th>Trainee</th><th>Status</th><th>Video</th><th>Time on page</th><th>Skips</th><th>Completed</th></tr></thead><tbody>' +
         (D.trainees.map(function (t) {
           var st = t.completed ? '<span class="pill pass">Completed</span>' : t.unlocked ? '<span class="pill">Module 1 unlocked</span>' : t.started ? '<span class="pill fail">In progress</span>' : '<span class="pill">Not started</span>';
-          return "<tr><td>" + esc(t.name) + '<br><span class="muted">' + esc(t.email) + "</span></td><td>" + st + "</td><td>" + t.videoPct + "%</td><td>" + mins(t.pageSec) + " / " + mins(D.minSec) + "</td><td" + (t.skips ? ' class="bad"' : "") + ">" + t.skips + "</td><td>" + (t.completedAt ? when(t.completedAt) : "—") + "</td></tr>";
+          return "<tr><td>" + esc(t.name) + '<br><span class="muted">' + esc(t.email) + "</span></td><td>" + st + "</td><td class=\"nw\">" + t.videoPct + "%</td><td class=\"nw\">" + mins(t.pageSec) + " / " + mins(D.minSec) + "</td><td" + (t.skips ? ' class="bad"' : "") + ">" + t.skips + "</td><td>" + (t.completedAt ? when(t.completedAt) : "—") + "</td></tr>";
         }).join("") || '<tr><td colspan="6" class="muted">No trainees yet.</td></tr>') + "</tbody></table></div>";
     } else if (sub === "res") {
       h = '<p class="muted">Pass mark: ' + D.passPct + "%.</p>" + '<div class="tbl"><table><thead><tr><th>Trainee</th><th>Read</th>' + (D.quiz ? "<th>Attempts</th><th>Best</th><th>Latest answers</th>" : "") + "</tr></thead><tbody>" +
@@ -171,7 +223,9 @@ summary{cursor:pointer;font-weight:600}
     if (g("ee")) g("ee").onclick = function () { editing = true; renderBody(); };
     if (g("cn")) g("cn").onclick = function () { editing = false; renderBody(); };
     if (g("sv")) g("sv").onclick = async function () {
-      var v = g("ed").value, ins = sub === "instr" ? v : D.guide.instructions, tl = sub === "tools" ? v : D.guide.tools;
+      var ins, tl;
+      if (sub === "instr") { var o = {}; SECS.forEach(function (sx) { o[sx[0]] = g("ed_" + sx[0]).value; }); ins = joinSecs(o); tl = D.guide.tools; }
+      else { ins = D.guide.instructions; tl = g("ed").value; }
       var r = await DFAuth.admin.saveGuide(M, ins, tl); if (r.error) { alert(r.error); return; }
       editing = false; load(false);
     };

@@ -281,7 +281,7 @@
     getAttempts: function () { return S.user ? S.attempts : null; },
     getUsage: function () { return S.user ? S.usage : null; },
     isCertified: function () { return S.user ? isCertified() : false; },
-    getSettings: getSettings, MODULES: MODULES,
+    getSettings: getSettings, MODULES: MODULES, isPreview: previewOn,
     getCompletion: function () { return S.user ? S.completion : null; }, paceReport: paceReport,
     getCertificate: function () { return S.user ? S.certificate : null; }, checkCertificate: checkCertificate,
     getAbout: function () { return S.user ? S.about : null; }, gateBlocked: gateBlocked, aboutBeat: aboutBeat,

@@ -97,6 +97,9 @@ Assessment. `pace.js` sets `window.DFPaceReady` once its locks are in place and 
 `bridge.js` puts the progress box in the header slot `#dfTrackSlot` when a page has one; in Trainer view preview it reads
 "Preview — nothing is recorded".
 
+In short: each module page shows its lessons from a row of buttons under the header; see `module-tabs.js` (Modules 2-6) and
+`module-01-usa.html` (Module 1).
+
 ## Module completion (automatic)
 
 Modules 1 to 5 are required. Module 6 (Refresher Courses) is optional and does not affect certification.

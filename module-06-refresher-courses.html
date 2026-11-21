@@ -92,11 +92,24 @@ body{overflow-x:hidden;}
   </a>
   <nav class="site-nav"><a class href='/'>Home</a><a class href='/about-us'>About Us</a><a class href='/modules'>Modules</a></nav>
 </header>
-<main class="page-main">
-  <a class='back-link' href='/modules'>&larr; Back to Modules</a>
-  <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 06 (Optional)</p>
-  <h1 class="sec-headings">Refresher Courses</h1>
-  <div class="body-text sec-content">Short, periodic refreshers on policy updates, new procedures, and common call issues. Designed to keep certified reps sharp without repeating full training.</div>
+<main class="page-main ml-page">
+  <section class="ml-hero">
+    <div class="ml-hero-text">
+      <p class="ml-kicker">Module 06 (Optional)</p>
+      <h1 class="sec-headings">Refresher Courses</h1>
+      <p class="ml-sub">Optional Refresher • Call Coaching</p>
+      <a class="ml-back" href="/modules">&larr; Back to Modules Tab</a>
+    </div>
+    <div class="ml-track" id="dfTrackSlot"></div>
+  </section>
+  <section class="ml-card">
+    <h2>Welcome to Module 6</h2>
+    <p class="ml-desc">Short, periodic refreshers on policy updates, new procedures, and common call issues. Designed to keep certified reps sharp without repeating full training.</p>
+    <ol class="ml-lessons">
+      <li><strong>Customer Service Training - Call Coaching</strong></li>
+    </ol>
+    <div class="ml-actions"><a class="ml-start" href="#training-embed-panel" onclick="event.preventDefault();var p=document.getElementById('training-embed-panel');if(!p.classList.contains('is-open'))document.querySelector('.training-toggle-btn').click();document.querySelector('.training-embed-wrap').scrollIntoView({behavior:'smooth'})">Start Training &rarr;</a></div>
+  </section>
 
   <section class="training-embed-wrap" aria-label="Customer Service Training">
     <button type="button" class="training-toggle-btn" aria-expanded="false" aria-controls="training-embed-panel" onclick="

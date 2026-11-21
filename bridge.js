@@ -2,9 +2,9 @@
 (function () {
   var MAP = [
     { match: /module-01-usa-interactive/i, module: "m1", quiz: "quiz_m1_usa", title: "Module 01" },
-    { match: /module-01-usa\.html/i, module: "m1", quiz: "quiz_m1_usa", title: "Module 01" },
+    { match: /module-01-usa(\.html)?\/?([?#]|$)/i, module: "m1", quiz: "quiz_m1_usa", title: "Module 01" },
     { match: /module-02-vehicle101-interactive/i, module: "m2", quiz: "quiz_m2_vehicle", title: "Module 02" },
-    { match: /module-02-vehicle101\.html/i, module: "m2", quiz: "quiz_m2_vehicle", title: "Module 02" },
+    { match: /module-02-vehicle101(\.html)?\/?([?#]|$)/i, module: "m2", quiz: "quiz_m2_vehicle", title: "Module 02" },
     { match: /module-03-software/i, module: "m3", quiz: "quiz_m3_tools", title: "Module 03" },
     { match: /module-04-csr/i, module: "m4", quiz: "quiz_m4_csr", title: "Module 04" },
     { match: /csr_fundamentals/i, module: "m4", quiz: "quiz_m4_csr", title: "Module 04" },
@@ -177,16 +177,19 @@
       var done = p.modules && p.modules[ctx.module];
       var q = p.quizzes && p.quizzes[ctx.quiz];
       var dash = user.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html";
+      var preview = !!(DF().isPreview && DF().isPreview()); // Trainer view preview: nothing is recorded
       div.innerHTML =
         '<div style="font-size:12px;font-weight:800;opacity:.8">' + DF().esc(ctx.title.toUpperCase()) + ' • ' + DF().esc(user.name.toUpperCase()) + '</div>' +
-        '<div style="font-weight:800;margin:4px 0">' + (done ? '✓ Completed' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
-        '<div class="df-hint" style="font-size:12px;opacity:.75">Quiz + activity feed your progress page automatically.</div>' +
+        '<div style="font-weight:800;margin:4px 0">' + (preview ? 'Preview — nothing is recorded' : done ? '✓ Completed' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
+        '<div class="df-hint" style="font-size:12px;opacity:.75">' + (preview ? 'You are previewing this module as a trainee.' : 'Quiz + activity feed your progress page automatically.') + '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
-        (ctx.module === "m1" || ctx.module === "m2" ? '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' : '') +
+        (!preview && (ctx.module === "m1" || ctx.module === "m2") ? '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' : '') +
         '<a href="' + dash + '" style="border-radius:8px;padding:8px 12px;font-weight:800;background:transparent;color:#fff;border:1px solid #fff;text-decoration:none;font-size:13px">My progress</a>' +
         '</div>';
-      document.body.appendChild(div);
-      document.documentElement.style.setProperty("--df-track-h", div.offsetHeight + "px");
+      // module landing pages have a slot in the dark header for this box; elsewhere it floats bottom-right
+      var slot = document.getElementById("dfTrackSlot");
+      if (slot) { slot.appendChild(div); document.documentElement.style.setProperty("--df-track-h", "0px"); }
+      else { document.body.appendChild(div); document.documentElement.style.setProperty("--df-track-h", div.offsetHeight + "px"); }
       var logBtn = document.getElementById("dfScore");
       if (logBtn) logBtn.onclick = function () {
         var lk = DF().quizLocked(ctx.quiz);

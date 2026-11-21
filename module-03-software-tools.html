@@ -35,15 +35,26 @@ body.csr-modal-open{overflow:hidden;}
   </a>
   <nav class="site-nav"><a class href='/'>Home</a><a class href='/about-us'>About Us</a><a class href='/modules'>Modules</a></nav>
 </header>
-<main class="page-main">
-  <a class='back-link' href='/modules'>&larr; Back to Modules</a>
-  <p class="mod-label" style="font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-accent);margin:0 0 8px;">Module 03</p>
-  <h1 class="sec-headings">Program Software & Tools</h1>
-  <div class="body-text sec-content">Walkthroughs of every system and software reps use daily.
-
-Scheduling tools, call software, and internal dashboards. Includes login steps, navigation basics, and where to find key customer info fast.</div>
-
-  <a href="https://onizoa.github.io/Scheduler-Training-Hub/index.html" class="cta-button" style="margin-top:14px;" onclick="openSchedulerModule(event)">Open Scheduler Training Hub</a>
+<main class="page-main ml-page">
+  <section class="ml-hero">
+    <div class="ml-hero-text">
+      <p class="ml-kicker">Module 03</p>
+      <h1 class="sec-headings">Program Software & Tools</h1>
+      <p class="ml-sub">Walkthroughs • Scheduling, Call Software &amp; Dashboards</p>
+      <a class="ml-back" href="/modules">&larr; Back to Modules Tab</a>
+    </div>
+    <div class="ml-track" id="dfTrackSlot"></div>
+  </section>
+  <section class="ml-card">
+    <h2>Welcome to Module 3</h2>
+    <p class="ml-desc">Walkthroughs of every system and software reps use daily. Includes login steps, navigation basics, and where to find key customer info fast.</p>
+    <ol class="ml-lessons">
+      <li><strong>Scheduling tools</strong></li>
+      <li><strong>Call software</strong></li>
+      <li><strong>Internal dashboards</strong></li>
+    </ol>
+    <div class="ml-actions"><a class="ml-start" href="https://onizoa.github.io/Scheduler-Training-Hub/index.html" onclick="openSchedulerModule(event)">Start Training &rarr;</a></div>
+  </section>
 
   <div id="schedulerModuleModal" class="csr-modal" aria-hidden="true">
     <div class="csr-modal-backdrop" onclick="closeSchedulerModule()"></div>

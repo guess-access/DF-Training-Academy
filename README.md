@@ -80,6 +80,15 @@ Staff only; admins are exempt. A "page complete" hint pill shows progress at the
 
 - **Next Module** (`data-df-next-module`): Modules 1, 2 and 4 also have a button to the next module that unlocks when half of that module's lessons are complete.
 
+## Module landing pages
+
+Every module's entry page (`module-01-usa.html` to `module-06-refresher-courses.html`) opens on the same landing design: a dark
+header with the module title, subtitle, **Back to Modules Tab** and the progress box, then a **Welcome to Module N** card listing
+its lessons and a **Start Training** button (styles: "Module landing" block in `style.css`). Start Training opens the interactive
+training (Modules 1, 2), the walkthrough or lesson window (Modules 3, 4), or scrolls to the assessment (5) or refresher (6).
+`bridge.js` puts the progress box in the header slot `#dfTrackSlot` when a page has one; in Trainer view preview it reads
+"Preview — nothing is recorded".
+
 ## Module completion (automatic)
 
 Modules 1 to 5 are required. Module 6 (Refresher Courses) is optional and does not affect certification.
@@ -109,6 +118,8 @@ Admins get a **Trainer View** link in the nav. For each module it shows two pane
 - **Panel 1: Trainer's Guide**: Instructions and Tools (editable, stored in D1 `guides`), Answer Key (read live from the module page via `window.DFQuizDef`), Results & Answers (each trainee's answers vs. the correct ones, with **Reset attempt**), Question Analytics, Trainer's Notes (admin-only) and Quiz Settings (attempt limit: unlimited / one-time / 2 / 3 / 5, enforced in `logQuiz` on the server).
 - **Panel 2: Trainee's Module**: the real module page loaded with `?preview=1`. In preview an admin's progress, scores and usage are **not recorded** (`auth.js`).
 
+- **Instructions** always show four bold sections: **Goal**, **Trainer's Talking Points**, **Trainee's Instructions** and **Suggested Follow-up / Activity**. Saved text is split on those heading lines (older labels such as "Instructions:", "How it works for trainees:" and "What to check:" are recognised). A section that has not been saved yet shows the module's suggested text, tagged Suggested. Edit shows one box per section.
+- Trainer View opens **side by side** on screens wider than 1100px, using the full width.
 - **About Us** is first in the Trainer View list ("About Us — Start here"). Its guide has Instructions, Tools, Trainer's Notes and a **Trainee Progress** table (video watched, time on page, skip attempts, completed on). It has no assessment. Previewing it does not record the admin's video progress.
 
 Existing databases need the new tables at the end of `schema.sql` (`attempt_answers`, `quiz_policy`, `trainer_notes`, `guides`). Per-question answers are captured for Modules 1, 4 and 5; Module 2 (Google Form) records the score only.

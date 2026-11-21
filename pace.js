@@ -7,6 +7,7 @@
  * Finished pages are remembered in this browser (localStorage). This is a pacing aid in the page; the About Us video
  * check is the part enforced on the server.
  *
+ * The progress bar is pinned to the top of the screen on every module (a lesson app inside a module page draws it on that page).
  * Works for: Module 1 (Next buttons + sidebar + Assessment), Module 2 (Next buttons + tabs + Assessment), Module 4 CSR (Next + section menu), Modules 3, 5, 6 (Next Module link).
  * Loaded AFTER bridge.js so its wrappers sit outside bridge's tracking hooks (a blocked click records nothing).
  */
@@ -21,10 +22,9 @@
   var uid = "anon";
   var done = {};             // pageKey -> true (persisted)
   var mem = {};              // pageKey -> { depth, dwell, need }
-  var announced = {}, wasLocked = {}; // so "page complete" is announced once, and only for pages that were locked
   var adapter = null;
   var curKey = null;
-  var pill = null, pillTimer = null;
+  var pill = null;
   var MOD = { "module-01-usa": "m1", "module-01-usa-interactive-training": "m1", "module-02-vehicle101-interactive-training": "m2", "module-03-software-tools": "m3", "csr_fundamentals": "m4", "module-05-certification": "m5", "module-06-refresher-courses": "m6" }[file];
   var sent = {};             // pageKey -> highest read % the server already has
 
@@ -63,38 +63,64 @@
   }
   function progress(id) { var m = mem[key(id)]; if (!m) return isDone(id) ? 1 : 0; return isDone(id) ? 1 : Math.min(m.depth, m.dwell / m.need, 1); }
 
-  /* ---- hint pill (bottom-left) ---- */
+  /* ---- progress bar: always pinned to the top of the screen ----
+     A lesson app shown inside a module page (?embed=1, same site) draws its bar on that module page,
+     so every module has the bar in the same place: the top of the screen. A spacer at the top of the
+     page keeps the bar from covering the site header. */
+  var HOST = document;
+  try { if (window.parent !== window && document.documentElement.classList.contains("df-embed") && window.parent.document.body) HOST = window.parent.document; } catch (e) {}
+  var flashUntil = 0, spacer = null;
   function ensurePill() {
-    if (pill) return pill;
-    var css = document.createElement("style");
-    css.textContent =
-      ".df-locked{opacity:.45 !important;cursor:not-allowed !important;filter:grayscale(.5);}" +
-      "#dfPace{position:fixed;left:16px;bottom:16px;z-index:99998;background:#050141;color:#fff;border-radius:14px;padding:10px 14px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.3);max-width:290px;transition:opacity .4s,transform .2s;}" +
-      "#dfPace .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.25);margin-top:7px;overflow:hidden;position:relative;}" +
-      "#dfPace .bar i{display:block;height:100%;background:#19c7ff;border-radius:99px;transition:width .5s;}" +
-      "#dfPace .bar b{position:absolute;left:50%;top:-1px;width:2px;height:8px;background:#fff;}" +
-      "#dfPace.ok{background:#11663d;}#dfPace.shake{transform:translateX(6px);}#dfPace.hide{opacity:0;pointer-events:none;}" +
-      "@media(max-width:640px){#dfPace{left:12px;right:12px;bottom:calc(var(--df-track-h,0px) + 20px);max-width:none;}.df-next-row{margin-bottom:240px !important;}.controls,.actions{margin-bottom:150px !important;}}";
-    document.head.appendChild(css);
-    pill = document.createElement("div");
-    pill.id = "dfPace"; pill.setAttribute("role", "status"); pill.setAttribute("aria-live", "polite");
-    document.body.appendChild(pill);
+    if (pill && HOST.contains(pill)) return pill;
+    if (!document.getElementById("dfLockCss")) {
+      var lock = document.createElement("style"); lock.id = "dfLockCss";
+      lock.textContent = ".df-locked{opacity:.45 !important;cursor:not-allowed !important;filter:grayscale(.5);}";
+      document.head.appendChild(lock);
+    }
+    if (!HOST.getElementById("dfPaceCss")) {
+      var css = HOST.createElement("style"); css.id = "dfPaceCss";
+      css.textContent =
+        "#dfPace{position:fixed;left:0;right:0;top:0;z-index:99998;display:flex;align-items:center;gap:16px;background:#050141;color:#fff;padding:9px 6vw;font:600 13px Inter,Arial,sans-serif;box-shadow:0 4px 16px rgba(5,1,65,.28);transition:background .3s,transform .2s;}" +
+        "#dfPace .txt{flex:0 1 auto;}" +
+        "#dfPace .bar{flex:1 1 160px;min-width:120px;height:8px;border-radius:99px;background:rgba(255,255,255,.2);overflow:hidden;position:relative;}" +
+        "#dfPace .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFB020,#2EE59D);border-radius:99px;transition:width .5s;}" +
+        "#dfPace .bar b{position:absolute;left:50%;top:0;width:2px;height:100%;background:#fff;opacity:.8;}" +
+        "#dfPace.ok{background:#2EE59D;color:#050141;}#dfPace.ok .bar{background:rgba(5,1,65,.15);}#dfPace.ok .bar i{background:#050141;}#dfPace.ok .bar b{display:none;}" +
+        "#dfPace.warn{background:#7B2FF7;}#dfPace.shake{transform:translateX(6px);}" +
+        "@media(max-width:640px){#dfPace{flex-wrap:wrap;gap:6px;padding:8px 14px;font-size:12px;}#dfPace .bar{flex:1 1 100%;}}";
+      HOST.head.appendChild(css);
+    }
+    pill = HOST.getElementById("dfPace");
+    if (!pill) {
+      pill = HOST.createElement("div");
+      pill.id = "dfPace"; pill.setAttribute("role", "progressbar"); pill.setAttribute("aria-valuemin", "0"); pill.setAttribute("aria-valuemax", "100");
+      HOST.body.appendChild(pill);
+    }
+    spacer = HOST.getElementById("dfPaceSpace");
+    if (!spacer) { spacer = HOST.createElement("div"); spacer.id = "dfPaceSpace"; spacer.setAttribute("aria-hidden", "true"); HOST.body.insertBefore(spacer, HOST.body.firstChild); }
     return pill;
   }
+  function fitSpacer() { if (pill && spacer) spacer.style.height = pill.offsetHeight + "px"; }
+  function setPill(cls, text, pct) {
+    var p = ensurePill();
+    var html = "<span class=\"txt\">" + text + "</span><span class=\"bar\"><i style=\"width:" + pct + "%\"></i><b></b></span>";
+    if (p.__html !== html) { p.innerHTML = html; p.__html = html; }
+    p.className = cls;
+    p.setAttribute("aria-valuenow", String(pct)); p.setAttribute("aria-valuetext", text);
+    fitSpacer();
+  }
+  function shake() { var p = ensurePill(); p.classList.add("shake"); setTimeout(function () { p.classList.remove("shake"); }, 250); }
   function showPill(id, flash) {
-    var p = ensurePill(), r = raw(id), pct = Math.round(r * 100);
-    clearTimeout(pillTimer);
-    p.classList.remove("hide");
-    if (r >= 1) {
-      p.className = "ok"; p.innerHTML = "✓ Page complete (100%).";
-      pillTimer = setTimeout(function () { p.classList.add("hide"); }, 3500);
+    if (!flash && Date.now() < flashUntil) return;   // let a "finish reading first" message stay up for a moment
+    var r = raw(id), pct = Math.round(r * 100);
+    if (r >= 1) { setPill("ok", "✓ Page complete (100%)", 100); return; }
+    if (flash) {
+      flashUntil = Date.now() + 3000;
+      setPill("warn", "Finish reading this page first • Page progress " + pct + "% • Next unlocks at 50%", pct); shake();
       return;
     }
-    p.className = "";
-    var line = isDone(id) ? "Next is unlocked • Page progress " + pct + "% • Read to 100% to count toward completion" :
-      (flash ? "Finish reading this page first. " : "") + "Page progress " + pct + "% • Next unlocks at 50%";
-    p.innerHTML = "<div>" + line + "</div><div class=\"bar\"><i style=\"width:" + pct + "%\"></i><b></b></div>";
-    if (flash) { p.classList.add("shake"); setTimeout(function () { p.classList.remove("shake"); }, 250); }
+    setPill("", isDone(id) ? "Next is unlocked • Page progress " + pct + "% • Read to 100% to count toward completion" :
+      "Page progress " + pct + "% • Next unlocks at 50%", pct);
   }
 
   /* ---- core ---- */
@@ -117,9 +143,7 @@
     adapter.paint(cur, isDone(cur.id));
     paintModuleLinks();
     report(cur.id, false);
-    // keep the hint visible until the page reaches 100%; then say so once
-    if (raw(cur.id) < 1) { showPill(cur.id, false); wasLocked[key(cur.id)] = true; }
-    else if (!announced[key(cur.id)]) { announced[key(cur.id)] = true; if (wasLocked[key(cur.id)]) showPill(cur.id, false); }
+    showPill(cur.id, false);   // the bar at the top always shows the current page's progress
   }
   function tick() {
     var cur = adapter.current(); if (!cur) return;
@@ -146,11 +170,9 @@
     });
   }
   function blockedModule() {
-    var p = ensurePill(); clearTimeout(pillTimer);
-    p.className = "shake";
-    p.textContent = "Next Module unlocks at 50% of this module. You are at " + Math.round(adapter.moduleProgress() * 100) + "%.";
-    setTimeout(function () { p.classList.remove("shake"); }, 250);
-    pillTimer = setTimeout(function () { p.classList.add("hide"); }, 4000);
+    var mp = Math.round(adapter.moduleProgress() * 100);
+    flashUntil = Date.now() + 4000;
+    setPill("warn", "Next Module unlocks at 50% of this module • You are at " + mp + "%", mp); shake();
   }
 
   /* ---- adapters ---- */
@@ -273,9 +295,25 @@
     };
   }
 
+  /* Module 2 and Module 4 pages: their lessons run in a lesson app inside the page, which draws the bar here once a
+     Segment is open. Until then (Welcome tab) the bar shows the module's overall reading progress. */
+  var HOST_MOD = { "module-02-vehicle101": "m2", "module-04-csr-fundamentals": "m4" }[file];
+  function hostBar() {
+    function paint() {
+      if (window.__dfPaceChild) return;   // a lesson app inside this page has taken over the bar
+      var c = (DFAuth.getCompletion() || {})[HOST_MOD], pct = c && c.pct ? Math.min(100, Math.round(c.pct)) : 0;
+      if (pct >= 100) setPill("ok", "✓ Module reading complete (100%)", 100);
+      else setPill("", "Module progress " + pct + "% • Open a Segment above to continue", pct);
+    }
+    paint(); setInterval(paint, 1000);
+    window.addEventListener("resize", fitSpacer);
+  }
+
   function start() {
     var me = DFAuth.current();
     if (!me || me.role === "admin") return;   // staff only
+    if (HOST_MOD) { hostBar(); return; }
+    if (HOST !== document) { try { HOST.defaultView.__dfPaceChild = true; } catch (e) {} }
     uid = me.id; loadDone();
     var server = MOD ? (DFAuth.getCompletion() || {})[MOD] : null;
     if (server) Object.keys(server.pages).forEach(function (id) {   // progress follows the user to any device

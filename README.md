@@ -94,6 +94,8 @@ Module 2 and Module 4 load their lesson apps (`module-02-vehicle101-interactive-
 white panel with `?embed=1` (their own header/sidebar hidden) and the buttons drive them, so their 50% pacing runs unchanged inside;
 Module 3 shows the Scheduler Training Hub, Module 6 the Call Coaching course, and Module 5 splits into Required Modules and Final
 Assessment. `pace.js` sets `window.DFPaceReady` once its locks are in place and only counts reading time while the lesson is on screen.
+Its page progress bar is pinned to the top of the screen on every module (staff only; admins are exempt). A lesson app inside a module page
+(Modules 2, 4) draws the bar on that page; on their Welcome tab the bar shows the module's overall reading progress.
 `bridge.js` puts the progress box in the header slot `#dfTrackSlot` when a page has one; in Trainer view preview it reads
 "Preview — nothing is recorded".
 

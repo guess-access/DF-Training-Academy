@@ -295,27 +295,33 @@ function gradeQuiz(){
     <h2>${passed?"Module 1 Assessment Passed!":"Module 1 Assessment Not Passed"}</h2>
     <p>You answered <strong>${score} of ${questions.length}</strong> questions correctly.</p>
     <span class="badge ${passed?"pass":"fail"}">${passed?"PASS":"REVIEW & RETAKE"}</span>
-    <p style="margin-top:20px;color:#667085">Your result is ready. If you need to email this result, use the button below.</p>
-    <button class="btn" onclick="emailResult(${score},${pct},${passed})">Email Assessment Result</button>
+    <p style="margin-top:20px;color:#667085">Your result is saved to your progress automatically. Use the button below to confirm it was recorded.</p>
+    <button class="btn" id="recordBtn" onclick="recordResult(this)">Record Assessment Result</button>
     <button class="btn secondary" style="margin-left:8px" onclick="showPage('welcome',document.querySelectorAll('.nav-btn')[0])">Review Course</button>
+    <p id="recordMsg" style="margin-top:12px;font-weight:700;min-height:1.4em" role="status" aria-live="polite"></p>
   `;
   result.scrollIntoView({behavior:"smooth"});
 }
-function emailResult(score,pct,passed){
-  const subject=encodeURIComponent("Module 1 Assessment Result - All About the USA");
-  const body=encodeURIComponent(
-`Module 1 Assessment Result - All About the USA
-
-Learner: 
-Score: ${score}/${questions.length}
-Percentage: ${pct}%
-Status: ${passed?"PASSED":"NOT PASSED"}
-
-Training:
-Segment 1: States
-Segment 2: Time Zones`
-  );
-  window.location.href=`mailto:mgomez@dealerfocus.com?subject=${subject}&body=${body}`;
+/* The score is saved when the assessment is submitted (bridge.js). This confirms that save reached the
+   server and re-sends it once only if it failed, so a result is never recorded twice. */
+function recordResult(btn){
+  const msg=document.getElementById("recordMsg");
+  const save=window.DFQuizSave;
+  if(!save){ msg.style.color="#c73535"; msg.textContent="Your result could not be recorded. Please sign in and submit the assessment again."; return; }
+  btn.disabled=true; btn.textContent="Recording…"; msg.textContent="";
+  save.promise
+    .then(r=>(r&&r.error)?save.retry():r)
+    .then(r=>{
+      if(r&&r.error){
+        btn.disabled=false; btn.textContent="Record Assessment Result";
+        msg.style.color="#c73535"; msg.textContent="Not recorded: "+r.error+" Please try again.";
+      }else if(r&&r.preview){
+        btn.textContent="Preview — nothing is recorded";
+      }else{
+        btn.textContent="✓ Result Recorded";
+        msg.style.color="var(--success)"; msg.innerHTML='Saved to your progress. See it in <a href="/user-dashboard" style="text-decoration:underline">My Progress</a>.';
+      }
+    });
 }
 </script>
 <script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>

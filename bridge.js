@@ -53,7 +53,17 @@
                 if (ok) score++;
                 answers.push({ q: q[0], p: sel ? q[1][Number(sel.value)] : null, c: q[1][q[2]], ok: ok });
               });
-              DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname }, answers);
+              var notIn = function () { return Promise.resolve({ error: "You are not signed in." }); };
+              var rec = DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname }, answers);
+              // "Record Assessment Result" waits on this; it re-sends once only if the first save failed
+              window.DFQuizSave = {
+                promise: rec && rec.save ? rec.save : notIn(),
+                retry: function () {
+                  var again = DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname, retry: true }, answers);
+                  this.promise = again && again.save ? again.save : notIn();
+                  return this.promise;
+                }
+              };
               if (Math.round(score / questions.length * 100) >= passPct()) DF().markModule(ctx.module, true);
               refreshWidget(ctx); // show the new best score (and Completed, once earned) in the box at the top right away
             }

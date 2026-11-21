@@ -163,10 +163,11 @@
     window.showPage = function (id, btn) {
       var from = curIdx(), to = -1;
       for (var i = 0; i < pages.length; i++) if (pages[i].id === id) to = i;
+      if (id === "assessment") to = pages.length; // the in-page assessment comes after the last lesson
       if (to > from && !allowForward(pages, from, to)) { blocked(pages[from].id); return; }
       return orig.apply(this, arguments);
     };
-    // the Assessment link is an <a> that opens a form: treat it as "after the last lesson"
+    // any link that leaves for an outside assessment: treat it as "after the last lesson"
     [].slice.call(document.querySelectorAll(".sidebar a.nav-btn, .actions a.btn:not([data-df-next-module])")).forEach(function (n) {
       n.addEventListener("click", function (e) {
         var from = curIdx();

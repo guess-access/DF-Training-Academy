@@ -107,7 +107,7 @@ Modules 1 to 5 are required. Module 6 (Refresher Courses) is optional and does n
 Staff no longer mark modules done. `pace.js` reports how much of each lesson page has been read; the server stores it in
 `module_completion` and works out each module's **Completion Rate** (average of its pages). A module is **Completed** when
 the rate is 100% and its assessment score is at or above the Admin pass mark. Modules 3 and 6 have no assessment, so 100%
-alone completes them. Assessments on Google Forms (Modules 1, 2) reach the site through **Log score** or an admin's Set score.
+alone completes them. Module 1's assessment is graded on the page and recorded automatically; the Module 2 Google Form reaches the site through **Log score** or an admin's Set score.
 Existing databases need the `module_completion` table from `schema.sql`.
 
 ## Graduation Certificate (`certificate.js`)

@@ -47,8 +47,17 @@ body.csr-modal-open{overflow:hidden;}
     </div>
     <div class="ml-track" id="dfTrackSlot"></div>
   </section>
-  <section class="ml-card">
-    <h2>Welcome to Module 4</h2>
+  <nav class="mod-tabs" aria-label="Module lessons">
+    <button type="button" class="mod-tab" data-tab="welcome">🏠 Welcome</button>
+    <button type="button" class="mod-tab" data-tab="csr0" data-panel="lessons">⭐ CSR Excellence Training</button>
+    <button type="button" class="mod-tab" data-tab="csr1" data-panel="lessons">🛡️ Handling Difficult Customers</button>
+    <button type="button" class="mod-tab" data-tab="csr2" data-panel="lessons">📞 Call Flow &amp; Script</button>
+    <button type="button" class="mod-tab" data-tab="csr3" data-panel="lessons">🚨 Hot Alert &amp; Disposition</button>
+    <button type="button" class="mod-tab" data-tab="csr4" data-panel="lessons">✅ Call Quality Form</button>
+  </nav>
+  <div class="mod-panel has-frame">
+    <section data-tab-panel="welcome">
+      <h2>Welcome to Module 4</h2>
     <p class="ml-desc">The core skills and standards every customer service rep is expected to master.</p>
     <ol class="ml-lessons">
       <li><strong>CSR Excellence Training</strong> — Set the foundation for delivering a great customer experience on every call.</li>
@@ -58,42 +67,33 @@ body.csr-modal-open{overflow:hidden;}
       <li><strong>Call Quality Assurance</strong> — Understand how calls are scored and what quality assurance looks for.</li>
     </ol>
     <p class="ml-note">Call Certification Prerequisites</p>
-    <div class="ml-actions"><a class="ml-start" href="/csr_fundamentals" onclick="openCSRModule(event)">Start Training &rarr;</a></div>
-  </section>
-
-  <div id="csrModuleModal" class="csr-modal" aria-hidden="true">
-    <div class="csr-modal-backdrop" onclick="closeCSRModule()"></div>
-    <div class="csr-modal-dialog" role="dialog" aria-modal="true" aria-label="CSR Fundamentals Module">
-      <div class="csr-modal-header">
-        <strong>CSR Fundamentals</strong>
-        <button type="button" class="csr-modal-close" onclick="closeCSRModule()" aria-label="Close">&times;</button>
-      </div>
-      <iframe id="csrModuleFrame" title="CSR Fundamentals Module" src="about:blank"></iframe>
-    </div>
+      <div class="ml-actions"><a class="ml-start" href="#" data-open-tab="csr0">Start Training &rarr;</a></div>
+    </section>
+    <section data-tab-panel="lessons" hidden>
+      <iframe class="mod-frame" id="lessonFrame" data-src="csr_fundamentals.html" title="CSR Fundamentals lessons"></iframe>
+    </section>
   </div>
+
 </main>
 <footer class="site-footer sec-footer">
   <span>© 2026 Dealerfocus Training Academy | All rights reserved.</span>
   
 </footer>
 
-<script>
-function openCSRModule(event){
-  event.preventDefault();
-  const modal=document.getElementById('csrModuleModal');
-  const frame=document.getElementById('csrModuleFrame');
-  if(frame.src !== new URL('csr_fundamentals.html', window.location.href).href) frame.src='csr_fundamentals.html';
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
-  document.body.classList.add('csr-modal-open');
-}
-function closeCSRModule(){
-  const modal=document.getElementById('csrModuleModal');
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden','true');
-  document.body.classList.remove('csr-modal-open');
-}
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeCSRModule();});
+<script src="module-tabs.js"></script><script src="auth.js"></script><script src="bridge.js"></script><script>
+/* Module 4: the buttons above drive the CSR lesson app inside the white panel (its own 50% pacing keeps working in there) */
+(function(){
+  var frame=document.getElementById("lessonFrame"), want=null;
+  function win(){ try{ return frame.contentWindow; }catch(e){ return null; } }
+  function go(){ var w=win(); if(w && !w.DFPaceReady){ setTimeout(go,150); return; } if(want!==null && w && typeof w.goModule==="function"){ w.goModule(want); want=null; } }
+  frame.addEventListener("load",go);
+  document.addEventListener("dftab",function(e){ var m=/^csr(\d)$/.exec(e.detail.tab); if(m){ want=+m[1]; go(); } });
+  setInterval(function(){
+    var w=win(), d=w&&w.document; if(!d) return;
+    if(document.querySelector('[data-tab-panel="lessons"]').hidden) return;
+    var act=d.querySelector(".side .mod.active"); if(act) DFTabs.mark("csr"+act.getAttribute("data-m"));
+  },700);
+})();
 </script>
-<script src="auth.js"></script><script src="bridge.js"></script></body>
+</body>
 </html>

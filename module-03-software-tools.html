@@ -45,27 +45,26 @@ body.csr-modal-open{overflow:hidden;}
     </div>
     <div class="ml-track" id="dfTrackSlot"></div>
   </section>
-  <section class="ml-card">
-    <h2>Welcome to Module 3</h2>
+  <nav class="mod-tabs" aria-label="Module lessons">
+    <button type="button" class="mod-tab" data-tab="welcome">🏠 Welcome</button>
+    <button type="button" class="mod-tab" data-tab="hub">🗓️ Scheduler Training Hub</button>
+  </nav>
+  <div class="mod-panel has-frame">
+    <section data-tab-panel="welcome">
+      <h2>Welcome to Module 3</h2>
     <p class="ml-desc">Walkthroughs of every system and software reps use daily. Includes login steps, navigation basics, and where to find key customer info fast.</p>
     <ol class="ml-lessons">
       <li><strong>Scheduling tools</strong></li>
       <li><strong>Call software</strong></li>
       <li><strong>Internal dashboards</strong></li>
     </ol>
-    <div class="ml-actions"><a class="ml-start" href="https://onizoa.github.io/Scheduler-Training-Hub/index.html" onclick="openSchedulerModule(event)">Start Training &rarr;</a></div>
-  </section>
-
-  <div id="schedulerModuleModal" class="csr-modal" aria-hidden="true">
-    <div class="csr-modal-backdrop" onclick="closeSchedulerModule()"></div>
-    <div class="csr-modal-dialog" role="dialog" aria-modal="true" aria-label="Scheduler Training Hub">
-      <div class="csr-modal-header">
-        <strong>Scheduler Training Hub</strong>
-        <button type="button" class="csr-modal-close" onclick="closeSchedulerModule()" aria-label="Close">&times;</button>
-      </div>
-      <iframe id="schedulerModuleFrame" title="Scheduler Training Hub" src="about:blank"></iframe>
-    </div>
+      <div class="ml-actions"><a class="ml-start" href="#" data-open-tab="hub">Start Training &rarr;</a></div>
+    </section>
+    <section data-tab-panel="hub" hidden>
+      <iframe class="mod-frame" data-src="https://onizoa.github.io/Scheduler-Training-Hub/index.html" title="Scheduler Training Hub"></iframe>
+    </section>
   </div>
+
 <div class="df-next-row" style="margin:32px 0 190px"><a class="cta-button" data-df-next href="/module-04-csr-fundamentals">Next Module: CSR Fundamentals →</a></div>
 </main>
 <footer class="site-footer sec-footer">
@@ -73,24 +72,5 @@ body.csr-modal-open{overflow:hidden;}
   
 </footer>
 
-<script>
-function openSchedulerModule(event){
-  event.preventDefault();
-  const modal=document.getElementById('schedulerModuleModal');
-  const frame=document.getElementById('schedulerModuleFrame');
-  const targetUrl='https://onizoa.github.io/Scheduler-Training-Hub/index.html';
-  if(frame.src !== targetUrl) frame.src=targetUrl;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
-  document.body.classList.add('csr-modal-open');
-}
-function closeSchedulerModule(){
-  const modal=document.getElementById('schedulerModuleModal');
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden','true');
-  document.body.classList.remove('csr-modal-open');
-}
-document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSchedulerModule();});
-</script>
-<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>
+<script src="module-tabs.js"></script><script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>
 </html>

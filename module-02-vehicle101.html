@@ -36,8 +36,15 @@
     </div>
     <div class="ml-track" id="dfTrackSlot"></div>
   </section>
-  <section class="ml-card">
-    <h2>Welcome to Module 2</h2>
+  <nav class="mod-tabs" aria-label="Module lessons">
+    <button type="button" class="mod-tab" data-tab="welcome">🏠 Welcome</button>
+    <button type="button" class="mod-tab" data-tab="services" data-panel="lessons">🔧 Auto Services</button>
+    <button type="button" class="mod-tab" data-tab="parts" data-panel="lessons">🚗 Car Parts &amp; Brands</button>
+    <a class="mod-tab" id="m2Assess" href="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform" target="_blank" rel="noopener noreferrer">📝 Assessment</a>
+  </nav>
+  <div class="mod-panel has-frame">
+    <section data-tab-panel="welcome">
+      <h2>Welcome to Module 2</h2>
     <p class="ml-desc">Core vehicle knowledge reps need to speak confidently with customers about their cars.</p>
     <ol class="ml-lessons">
       <li><strong>Vehicle Parts & Accessories</strong> — Identify common vehicle components and add-on accessories.</li>
@@ -46,12 +53,39 @@
       <li><strong>Other Services & Inspection</strong> — Cover additional service offerings and inspection procedures.</li>
       <li><strong>Dealership Systems & Policy</strong> — Review the dealership systems and policies tied to vehicle service.</li>
     </ol>
-    <div class="ml-actions"><a class="ml-start" href="/module-02-vehicle101-interactive-training">Start Training &rarr;</a></div>
-  </section>
+      <div class="ml-actions"><a class="ml-start" href="#" data-open-tab="services">Start Training &rarr;</a></div>
+    </section>
+    <section data-tab-panel="lessons" hidden>
+      <iframe class="mod-frame" id="lessonFrame" data-src="module-02-vehicle101-interactive-training.html" title="Vehicle 101 lessons"></iframe>
+    </section>
+  </div>
 </main>
 <footer class="site-footer sec-footer">
   <span>© 2026 Dealerfocus Training Academy | All rights reserved.</span>
   
 </footer>
-<script src="auth.js"></script><script src="bridge.js"></script></body>
+<script src="module-tabs.js"></script><script src="auth.js"></script><script src="bridge.js"></script><script>
+/* Module 2: the buttons above drive the lesson app inside the white panel (its own 50% pacing keeps working in there) */
+(function(){
+  var frame=document.getElementById("lessonFrame"), want=null;
+  function win(){ try{ return frame.contentWindow; }catch(e){ return null; } }
+  function go(){ var w=win(); if(w && !w.DFPaceReady){ setTimeout(go,150); return; } if(want && w && typeof w.showTab==="function"){ w.showTab(want); want=null; } }
+  frame.addEventListener("load",go);
+  document.addEventListener("dftab",function(e){ var t=e.detail.tab; if(t==="services"||t==="parts"){ want=t; go(); } });
+  // keep the buttons in step with the lesson app: active lesson, locked lessons, locked assessment
+  setInterval(function(){
+    var w=win(), d=w&&w.document; if(!d||!d.querySelector(".tab-content")) return;
+    var lessons=!document.querySelector('[data-tab-panel="lessons"]').hidden;
+    var act=d.querySelector(".tab-content.active"); if(lessons&&act) DFTabs.mark(act.id);
+    [].slice.call(d.querySelectorAll(".tab-btn")).forEach(function(b,i){ var mine=document.querySelectorAll('.mod-tabs [data-panel="lessons"]')[i]; if(mine) mine.classList.toggle("df-locked",b.classList.contains("df-locked")); });
+    var fa=d.querySelector("a.assessment-btn"); if(fa) document.getElementById("m2Assess").classList.toggle("df-locked",fa.classList.contains("df-locked"));
+  },700);
+  document.getElementById("m2Assess").addEventListener("click",function(e){
+    if(!this.classList.contains("df-locked")) return;
+    e.preventDefault(); DFTabs.show(document.querySelector('[data-tab-panel="lessons"]').hidden?"services":(document.querySelector(".mod-tabs .active")||{}).getAttribute&&document.querySelector(".mod-tabs .active").getAttribute("data-tab")||"services");
+    var w=win(), fa=w&&w.document.querySelector("a.assessment-btn"); if(fa) fa.click();   // shows "finish reading first"
+  });
+})();
+</script>
+</body>
 </html>

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Service Training - Call Coaching</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,10 +14,10 @@
         }
 
         :root {
-            --primary: #1e3a5f;
-            --secondary: #0d5c3f;
-            --accent: #d97757;
-            --accent-light: #f5d5c8;
+            --primary: #050141;
+            --secondary: #2a1490;
+            --accent: #7B2FF7;
+            --accent-light: #efe6ff;
             --success: #10b981;
             --warning: #f59e0b;
             --text-primary: #1f2937;
@@ -23,13 +25,13 @@
             --bg-light: #f9fafb;
             --bg-white: #ffffff;
             --border: #e5e7eb;
-            --focus: #3b82f6;
+            --focus: #7B2FF7;
         }
 
         html, body {
             height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #f9fafb 0%, #f0f4f8 100%);
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #f9fafb 0%, #F4F6FF 100%);
             color: var(--text-primary);
         }
 
@@ -406,12 +408,12 @@
 
         /* COACHING PANEL */
         .coaching-panel {
-            background: linear-gradient(135deg, var(--secondary) 0%, #0a4d36 100%);
+            background: linear-gradient(135deg, var(--secondary) 0%, #050141 100%);
             color: white;
             border-radius: 12px;
             padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 4px 12px rgba(13, 92, 63, 0.15);
+            box-shadow: 0 4px 12px rgba(5, 1, 65, 0.18);
         }
 
         .coaching-panel h3 {
@@ -461,7 +463,7 @@
         }
 
         .btn:hover {
-            background: #0d1f2d;
+            background: #1d0f6e;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(30, 58, 95, 0.2);
         }
@@ -471,7 +473,7 @@
         }
 
         .btn-secondary:hover {
-            background: #0a4d36;
+            background: #050141;
         }
 
         .btn-success {
@@ -479,7 +481,7 @@
         }
 
         .btn-success:hover {
-            background: #059669;
+            background: #5a1fc0;
         }
 
         .btn-group {
@@ -517,12 +519,12 @@
         }
 
         .upload-area:hover {
-            background: #f0f4f8;
+            background: #F4F6FF;
             border-color: var(--accent);
         }
 
         .upload-area.dragover {
-            background: #fff5f1;
+            background: #f3edff;
             border-color: var(--accent);
         }
 
@@ -540,7 +542,7 @@
         textarea:focus {
             outline: none;
             border-color: var(--focus);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 0 3px rgba(123, 47, 247, 0.12);
         }
 
         /* KNOWLEDGE APPLICATION FORM */
@@ -572,7 +574,7 @@
         .form-field input:focus {
             outline: none;
             border-color: var(--focus);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 0 3px rgba(123, 47, 247, 0.12);
         }
 
         @media (max-width: 768px) {
@@ -685,6 +687,8 @@
     
 /* Refresher Training - full width */
 .refresher-training-embed, .refresher-training-embed iframe, iframe.refresher-training-iframe { width:100% !important; max-width:none !important; display:block; border:0; }
+        /* Night Drive palette (matches the home page): Poppins headings */
+        .page-title, .hero h2, .sidebar h1, .sidebar h2, .scorecard h3 { font-family: Poppins, Inter, sans-serif; }
 </style>
 <script src="auth.js"></script>
 </head>

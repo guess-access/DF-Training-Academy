@@ -6,6 +6,8 @@
  */
 
 const MODULE_IDS = ["m1", "m2", "m3", "m4", "m5", "m6"];
+// Pages that have a Trainer's Guide (guide text + trainer notes): About Us plus every module.
+const GUIDE_IDS = ["about"].concat(MODULE_IDS);
 const QUIZ_IDS = ["quiz_m1_usa", "quiz_m2_vehicle", "quiz_m3_tools", "quiz_m4_csr", "quiz_final", "quiz_m6_refresh"];
 const REQUIRED_MODULES = ["m1", "m2", "m3", "m4", "m5"]; // Module 6 (Refresher) is optional
 // assessment that decides each module; null = the module has no assessment, so 100% completion alone completes it
@@ -24,6 +26,7 @@ const MAX_FAILS = 8;
 const LOCK_MIN = 15;
 // Starting text for each module's Trainer's Guide; an admin can edit it in the Trainer view (saved in D1 table `guides`).
 const DEFAULT_GUIDES = {
+  about: { instructions: "Goal: trainees meet the Dealerfocus team and understand what we do before they start Module 1.\nHow it works for trainees:\n1. They watch the About Us video at normal speed. Skipping ahead and fast-forwarding are blocked, and the video pauses if they switch tabs.\n2. At 50% of the video the Next button unlocks Module 1.\n3. About Us is complete when they have watched the whole video and spent the minimum time on the page (set on the Admin dashboard, 5 minutes by default).\nWhat to check:\n- Trainee Progress tab: who has not started, who is stuck under 50%, and anyone with skip attempts.\n- Several skip attempts can mean a trainee is rushing; a quick check-in helps.\n- If the video changes or a trainee needs a fresh start, use Reset About Us on the Admin dashboard (View / edit).\nSuggested follow-up: ask each trainee one thing they learned about the team before they move on.", tools: "About Us page: /about-us (use the Trainee's Module tab to preview it; nothing is recorded).\nAdmin dashboard: About Us gate on/off, minimum minutes on the page, and Reset About Us per trainee." },
   m1: { instructions: "Goal: trainees can name the states, abbreviations and time zones and place states in regions.\n1. Let trainees work through both lessons (States & Time Zones, Regions & States) before the assessment.\n2. Time zones are the most commonly missed area: check the Question Analytics tab after a few attempts.\n3. Pass mark is set on the Admin dashboard.", tools: "Interactive training: module-01-usa-interactive-training\nUse Preview as Trainee (Trainee's Module tab) to walk through it without recording anything." },
   m2: { instructions: "Goal: trainees know basic vehicle parts, accessories, maintenance and diagnostics.\nThe assessment is a Google Form, so scores are entered with Log score (trainee) or Set score (admin). Per-question answers are viewed in the Google Form responses.", tools: "Assessment: the Google Form linked from the module's Assessment button." },
   m3: { instructions: "Goal: trainees can navigate the programs and software used daily.\nThe walkthroughs sit on an outside site, so only time on the page is measured. Confirm hands-on skills with a short live check.", tools: "Outside training site linked from the module page." },
@@ -551,7 +554,8 @@ async function adminUser(env, url) {
 /** Everything the Trainer's Guide panel needs for one module: guide text, trainees' results and answers, question analytics, notes, attempt limit. */
 async function adminModule(env, url) {
   const m = url.searchParams.get("m") || "";
-  if (MODULE_IDS.indexOf(m) < 0) return fail("Unknown module.");
+  if (GUIDE_IDS.indexOf(m) < 0) return fail("Unknown module.");
+  if (m === "about") return adminAboutGuide(env);
   const quiz = MODULE_QUIZ[m];
   const g = await env.DB.prepare("SELECT instructions, tools, updated_at, updated_by FROM guides WHERE module_id = ?").bind(m).first();
   const guide = g ? { instructions: g.instructions, tools: g.tools, updatedAt: g.updated_at, updatedBy: g.updated_by } : { instructions: DEFAULT_GUIDES[m].instructions, tools: DEFAULT_GUIDES[m].tools, isDefault: true };
@@ -588,6 +592,27 @@ async function adminModule(env, url) {
   });
 }
 
+/** Trainer's Guide for About Us: guide text, each trainee's video/time progress, and trainer notes. */
+async function adminAboutGuide(env) {
+  const g = await env.DB.prepare("SELECT instructions, tools, updated_at, updated_by FROM guides WHERE module_id = 'about'").first();
+  const guide = g ? { instructions: g.instructions, tools: g.tools, updatedAt: g.updated_at, updatedBy: g.updated_by } : { instructions: DEFAULT_GUIDES.about.instructions, tools: DEFAULT_GUIDES.about.tools, isDefault: true };
+  const cfg = await getAboutCfg(env);
+  const users = (await env.DB.prepare("SELECT id, name, email FROM users WHERE role = 'user' ORDER BY name").all()).results;
+  const [rows, notes] = await env.DB.batch([
+    env.DB.prepare("SELECT user_id, coverage, page_sec, duration, violations, completed_at, last_pos, last_playing, ended FROM about_progress"),
+    env.DB.prepare("SELECT id, user_id, note, author, at FROM trainer_notes WHERE module_id = 'about' ORDER BY at DESC LIMIT 500")
+  ]);
+  const byUser = {}; rows.results.forEach((r) => { byUser[r.user_id] = r; });
+  return json({
+    module: "about", quiz: null, guide, passPct: await getPassPct(env), maxAttempts: 0, minSec: cfg.minSec, gate: cfg.gate,
+    trainees: users.map((u) => {
+      const a = aboutSummary(byUser[u.id] || null, cfg);
+      return { id: u.id, name: u.name, email: u.email, started: !!byUser[u.id], videoPct: a.videoPct, pageSec: a.pageSec, skips: a.skips, unlocked: a.unlocked, completed: a.completed, completedAt: a.completedAt };
+    }),
+    analytics: [], notes: notes.results.map((n) => ({ id: n.id, userId: n.user_id, note: n.note, author: n.author, at: n.at }))
+  });
+}
+
 async function adminCountOtherAdmins(env, id) {
   const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role='admin' AND id != ?").bind(id).first();
   return r.n;
@@ -617,7 +642,7 @@ async function adminAction(action, req, env, me) {
     return json({ ok: true, user: r.user });
   }
   if (action === "guide") {
-    if (MODULE_IDS.indexOf(b.module) < 0) return fail("Unknown module.");
+    if (GUIDE_IDS.indexOf(b.module) < 0) return fail("Unknown module.");
     await env.DB.prepare("INSERT INTO guides (module_id, instructions, tools, updated_at, updated_by) VALUES (?,?,?,?,?) ON CONFLICT(module_id) DO UPDATE SET instructions = excluded.instructions, tools = excluded.tools, updated_at = excluded.updated_at, updated_by = excluded.updated_by")
       .bind(b.module, clip(b.instructions, 8000), clip(b.tools, 8000), nowISO(), me.name).run();
     return json({ ok: true });
@@ -631,7 +656,7 @@ async function adminAction(action, req, env, me) {
   }
   if (action === "note") {
     const note = clip(b.note, 2000).trim();
-    if (!note || MODULE_IDS.indexOf(b.module) < 0) return fail("Write a note first.");
+    if (!note || GUIDE_IDS.indexOf(b.module) < 0) return fail("Write a note first.");
     const u = await env.DB.prepare("SELECT 1 AS x FROM users WHERE id = ?").bind(String(b.userId || "")).first();
     if (!u) return fail("Not found.", 404);
     await env.DB.prepare("INSERT INTO trainer_notes (id, user_id, module_id, note, author, at) VALUES (?,?,?,?,?,?)").bind("n_" + randHex(8), b.userId, b.module, note, me.name, nowISO()).run();

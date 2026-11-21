@@ -109,4 +109,6 @@ Admins get a **Trainer View** link in the nav. For each module it shows two pane
 - **Panel 1: Trainer's Guide**: Instructions and Tools (editable, stored in D1 `guides`), Answer Key (read live from the module page via `window.DFQuizDef`), Results & Answers (each trainee's answers vs. the correct ones, with **Reset attempt**), Question Analytics, Trainer's Notes (admin-only) and Quiz Settings (attempt limit: unlimited / one-time / 2 / 3 / 5, enforced in `logQuiz` on the server).
 - **Panel 2: Trainee's Module**: the real module page loaded with `?preview=1`. In preview an admin's progress, scores and usage are **not recorded** (`auth.js`).
 
+- **About Us** is first in the Trainer View list ("About Us — Start here"). Its guide has Instructions, Tools, Trainer's Notes and a **Trainee Progress** table (video watched, time on page, skip attempts, completed on). It has no assessment. Previewing it does not record the admin's video progress.
+
 Existing databases need the new tables at the end of `schema.sql` (`attempt_answers`, `quiz_policy`, `trainer_notes`, `guides`). Per-question answers are captured for Modules 1, 4 and 5; Module 2 (Google Form) records the score only.

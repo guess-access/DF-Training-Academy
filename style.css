@@ -103,6 +103,9 @@ a{color:inherit;text-decoration:none;}
 .at-badge.done{background:#11663d;}
 .at-badge.warn{background:#a61e2a;}
 .at-lead{font-size:15px;line-height:1.65;opacity:.9;margin:6px 0 16px;max-width:80ch;}
+.at-steps{font-size:15px;line-height:1.65;margin:0 0 18px;padding-left:22px;max-width:80ch;}
+.at-steps li{margin:0 0 6px;padding-left:4px;}
+.at-steps li::marker{font-weight:800;color:var(--c-violet,#7B2FF7);}
 .at-meter{display:grid;grid-template-columns:150px 1fr 90px;align-items:center;gap:12px;margin:8px 0;font-size:14px;}
 .at-label{font-weight:700;}
 .at-val{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}

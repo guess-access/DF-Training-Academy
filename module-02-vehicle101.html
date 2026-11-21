@@ -40,7 +40,7 @@
     <button type="button" class="mod-tab" data-tab="welcome">🏠 Welcome</button>
     <button type="button" class="mod-tab" data-tab="parts" data-panel="lessons">🚗 Segment 1: Car Parts &amp; Brands</button>
     <button type="button" class="mod-tab" data-tab="services" data-panel="lessons">🔧 Segment 2: Auto Services</button>
-    <a class="mod-tab" id="m2Assess" href="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform" target="_blank" rel="noopener noreferrer">📝 Assessment</a>
+    <button type="button" class="mod-tab" id="m2Assess" data-tab="assessment">📝 Assessment</button>
   </nav>
   <div class="mod-panel has-frame">
     <section data-tab-panel="welcome">
@@ -55,6 +55,14 @@
       <li><strong>Dealership Systems & Policy</strong> — Review the dealership systems and policies tied to vehicle service.</li>
     </ol>
       <div class="ml-actions"><a class="ml-start" href="#" data-open-tab="parts">Start Training &rarr;</a></div>
+    </section>
+    <section data-tab-panel="assessment" hidden>
+      <div class="m2-form-head">
+        <h2>Module 2 Assessment</h2>
+        <p>Answer every question and press <strong>Submit</strong> at the end of the form. Then enter your score with <strong>Log score</strong> in the box at the top of this page.</p>
+      </div>
+      <iframe class="mod-frame" id="assessFrame" data-src="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform?embedded=true" title="Module 2 Assessment form" allow="clipboard-write"></iframe>
+      <p class="m2-form-alt">Form not showing? <a href="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform" target="_blank" rel="noopener noreferrer">Open the assessment in a new tab</a>.</p>
     </section>
     <section data-tab-panel="lessons" hidden>
       <iframe class="mod-frame" id="lessonFrame" data-src="module-02-vehicle101-interactive-training.html" title="Vehicle 101 lessons"></iframe>
@@ -83,7 +91,7 @@
   },700);
   document.getElementById("m2Assess").addEventListener("click",function(e){
     if(!this.classList.contains("df-locked")) return;
-    e.preventDefault(); DFTabs.show(document.querySelector('[data-tab-panel="lessons"]').hidden?"services":(document.querySelector(".mod-tabs .active")||{}).getAttribute&&document.querySelector(".mod-tabs .active").getAttribute("data-tab")||"services");
+    e.preventDefault(); e.stopPropagation(); DFTabs.show(document.querySelector('[data-tab-panel="lessons"]').hidden?"services":(document.querySelector(".mod-tabs .active")||{}).getAttribute&&document.querySelector(".mod-tabs .active").getAttribute("data-tab")||"services");
     var w=win(), fa=w&&w.document.querySelector("a.assessment-btn"); if(fa) fa.click();   // shows "finish reading first"
   });
 })();

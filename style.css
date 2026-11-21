@@ -211,3 +211,9 @@ a{color:inherit;text-decoration:none;}
 .mod-panel.has-frame{padding:14px;}
 .mod-panel.has-frame [data-tab-panel="welcome"]{padding:18px 18px 8px;}
 @media (max-width:640px){.mod-panel{padding:22px 16px;}.mod-panel.has-frame{padding:8px;}.mod-tabs .mod-tab{flex:1 1 calc(50% - 10px);justify-content:center;padding:11px 10px;font-size:14px;}.mod-frame{height:calc(100vh - 120px);min-height:480px;}}
+/* Module 2 Assessment: the Google Form shown inside the white panel */
+.m2-form-head{padding:14px 14px 10px;}
+.m2-form-head h2{margin:0 0 6px;}
+.m2-form-head p{margin:0;color:#344054;font-size:15px;line-height:1.6;}
+.m2-form-alt{margin:10px 14px 4px;font-size:14px;color:#344054;}
+.m2-form-alt a{color:var(--c-violet);font-weight:700;text-decoration:underline;}

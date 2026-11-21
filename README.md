@@ -101,3 +101,12 @@ The trainer name is set in `certificate.js`. An admin's **Reset progress** remov
 
 - Module 02 and other pages still reference `assets/*.mp4` clips that are not in the repo; add them to `assets/` to enable them.
 - Google Form assessments (Module 02) cannot be auto-graded; staff use **Log score** and an admin can verify/edit.
+
+## Trainer view (`trainer.html`, admin only)
+
+Admins get a **Trainer View** link in the nav. For each module it shows two panels (tabs, or side by side on wide screens):
+
+- **Panel 1: Trainer's Guide**: Instructions and Tools (editable, stored in D1 `guides`), Answer Key (read live from the module page via `window.DFQuizDef`), Results & Answers (each trainee's answers vs. the correct ones, with **Reset attempt**), Question Analytics, Trainer's Notes (admin-only) and Quiz Settings (attempt limit: unlimited / one-time / 2 / 3 / 5, enforced in `logQuiz` on the server).
+- **Panel 2: Trainee's Module**: the real module page loaded with `?preview=1`. In preview an admin's progress, scores and usage are **not recorded** (`auth.js`).
+
+Existing databases need the new tables at the end of `schema.sql` (`attempt_answers`, `quiz_policy`, `trainer_notes`, `guides`). Per-question answers are captured for Modules 1, 4 and 5; Module 2 (Google Form) records the score only.

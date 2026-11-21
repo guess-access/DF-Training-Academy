@@ -22,6 +22,15 @@ const COVER_MAX_WALL = 120;        // video credit: playback is capped by real e
 const ABOUT_DEFAULT_MIN_SEC = 300; // default minimum time on the About Us page (5 minutes)
 const MAX_FAILS = 8;
 const LOCK_MIN = 15;
+// Starting text for each module's Trainer's Guide; an admin can edit it in the Trainer view (saved in D1 table `guides`).
+const DEFAULT_GUIDES = {
+  m1: { instructions: "Goal: trainees can name the states, abbreviations and time zones and place states in regions.\n1. Let trainees work through both lessons (States & Time Zones, Regions & States) before the assessment.\n2. Time zones are the most commonly missed area: check the Question Analytics tab after a few attempts.\n3. Pass mark is set on the Admin dashboard.", tools: "Interactive training: module-01-usa-interactive-training\nUse Preview as Trainee (Trainee's Module tab) to walk through it without recording anything." },
+  m2: { instructions: "Goal: trainees know basic vehicle parts, accessories, maintenance and diagnostics.\nThe assessment is a Google Form, so scores are entered with Log score (trainee) or Set score (admin). Per-question answers are viewed in the Google Form responses.", tools: "Assessment: the Google Form linked from the module's Assessment button." },
+  m3: { instructions: "Goal: trainees can navigate the programs and software used daily.\nThe walkthroughs sit on an outside site, so only time on the page is measured. Confirm hands-on skills with a short live check.", tools: "Outside training site linked from the module page." },
+  m4: { instructions: "Goal: trainees handle calls professionally, including difficult customers.\nEach knowledge check counts once, on the first answer. The score is recorded when every check has been answered.", tools: "Interactive lessons: csr_fundamentals" },
+  m5: { instructions: "Goal: final written assessment covering Modules 1-4. Passing it, with Modules 1-4 Completed, issues the Graduation Certificate.\nConsider setting the attempt limit here (Quiz Settings tab).", tools: "Final Written Assessment on the module page." },
+  m6: { instructions: "Optional refresher. It does not affect certification and has no assessment.", tools: "Refresher courses embedded on the module page." }
+};
 
 const enc = new TextEncoder();
 const nowISO = () => new Date().toISOString();
@@ -236,6 +245,9 @@ async function buildState(env, user) {
   const cfg = await getAboutCfg(env);
   const settings = { passPct, aboutGate: cfg.gate, aboutMinSec: cfg.minSec };
   if (!user) return { user: null, settings };
+  const pol = await env.DB.prepare("SELECT quiz_id, max_attempts FROM quiz_policy WHERE max_attempts > 0").all();
+  settings.quizPolicy = {};
+  pol.results.forEach((r) => { settings.quizPolicy[r.quiz_id] = r.max_attempts; });
   const data = await buildUserData(env, user.id);
   data.certificate = await issueCertificate(env, user, data);
   return { user, settings, ...data };
@@ -387,6 +399,13 @@ async function logQuiz(req, env, me) {
   const total = Number(b.total) > 0 ? Math.min(Number(b.total), 1000) : 100;
   const raw = Number(b.raw);
   if (!(raw >= 0) || raw > total) return fail("Invalid score.");
+  if (me.role !== "admin") {
+    const pol = await env.DB.prepare("SELECT max_attempts FROM quiz_policy WHERE quiz_id = ?").bind(b.quiz).first();
+    if (pol && pol.max_attempts > 0) {
+      const c = await env.DB.prepare("SELECT COUNT(*) AS n FROM attempts WHERE user_id = ? AND quiz_id = ? AND (source IS NULL OR source != 'admin-edit')").bind(me.id, b.quiz).first();
+      if (c.n >= pol.max_attempts) return fail("Attempt limit reached. Ask your trainer to reset your attempt.", 403);
+    }
+  }
   const pct = Math.round((raw / total) * 100);
   const passPct = await getPassPct(env);
   const t = nowISO();
@@ -396,6 +415,11 @@ async function logQuiz(req, env, me) {
   if (b.extra && typeof b.extra === "object") { try { extra = clip(JSON.stringify(b.extra), 500); } catch (e) {} }
   await env.DB.prepare("INSERT INTO attempts (id, user_id, quiz_id, score, raw, total, passed, at, source, extra) VALUES (?,?,?,?,?,?,?,?,NULL,?)")
     .bind(id, me.id, b.quiz, pct, raw, total, passed, t, extra).run();
+  if (Array.isArray(b.answers) && b.answers.length) {
+    const ans = b.answers.slice(0, 100).map((a) => ({ q: clip(a && a.q, 300), p: a && a.p != null ? clip(a.p, 200) : null, c: clip(a && a.c, 200), ok: a && a.ok ? 1 : 0 }));
+    const js = JSON.stringify(ans);
+    if (js.length <= 24000) await env.DB.prepare("INSERT INTO attempt_answers (attempt_id, user_id, quiz_id, answers, at) VALUES (?,?,?,?,?)").bind(id, me.id, b.quiz, js, t).run();
+  }
   // keep at most 200 attempts per user
   await env.DB.prepare("DELETE FROM attempts WHERE user_id = ? AND id NOT IN (SELECT id FROM attempts WHERE user_id = ? ORDER BY at DESC LIMIT 200)")
     .bind(me.id, me.id).run();
@@ -524,6 +548,46 @@ async function adminUser(env, url) {
   });
 }
 
+/** Everything the Trainer's Guide panel needs for one module: guide text, trainees' results and answers, question analytics, notes, attempt limit. */
+async function adminModule(env, url) {
+  const m = url.searchParams.get("m") || "";
+  if (MODULE_IDS.indexOf(m) < 0) return fail("Unknown module.");
+  const quiz = MODULE_QUIZ[m];
+  const g = await env.DB.prepare("SELECT instructions, tools, updated_at, updated_by FROM guides WHERE module_id = ?").bind(m).first();
+  const guide = g ? { instructions: g.instructions, tools: g.tools, updatedAt: g.updated_at, updatedBy: g.updated_by } : { instructions: DEFAULT_GUIDES[m].instructions, tools: DEFAULT_GUIDES[m].tools, isDefault: true };
+  const users = (await env.DB.prepare("SELECT id, name, email FROM users WHERE role = 'user' ORDER BY name").all()).results;
+  const [comp, notes, polRow, att] = await env.DB.batch([
+    env.DB.prepare("SELECT user_id, pages, total, updated_at FROM module_completion WHERE module_id = ?").bind(m),
+    env.DB.prepare("SELECT id, user_id, note, author, at FROM trainer_notes WHERE module_id = ? ORDER BY at DESC LIMIT 500").bind(m),
+    env.DB.prepare("SELECT max_attempts FROM quiz_policy WHERE quiz_id = ?").bind(quiz || ""),
+    env.DB.prepare(`SELECT a.id, a.user_id, a.score, a.raw, a.total, a.passed, a.at, a.source, x.answers FROM attempts a
+      JOIN users u ON u.id = a.user_id AND u.role = 'user' LEFT JOIN attempt_answers x ON x.attempt_id = a.id WHERE a.quiz_id = ? ORDER BY a.at`).bind(quiz || "")
+  ]);
+  const compBy = {}; comp.results.forEach((c) => { compBy[c.user_id] = completionOf(c).pct; });
+  const byUser = {}, qa = {}, seen = {};
+  att.results.forEach((a) => {
+    let answers = null; try { answers = a.answers ? JSON.parse(a.answers) : null; } catch (e) {}
+    (byUser[a.user_id] = byUser[a.user_id] || []).push({ id: a.id, at: a.at, score: a.score, raw: a.raw, total: a.total, passed: !!a.passed, source: a.source, answers });
+    if (answers) {
+      const first = !seen[a.user_id]; seen[a.user_id] = 1;
+      answers.forEach((x) => {
+        const o = qa[x.q] || (qa[x.q] = { q: x.q, n: 0, right: 0, fn: 0, fr: 0, wrong: {} });
+        o.n++; if (x.ok) o.right++; else if (x.p != null) o.wrong[x.p] = (o.wrong[x.p] || 0) + 1;
+        if (first) { o.fn++; if (x.ok) o.fr++; }
+      });
+    }
+  });
+  const analytics = Object.values(qa).map((o) => {
+    const top = Object.entries(o.wrong).sort((a, b) => b[1] - a[1])[0];
+    return { q: o.q, n: o.n, pct: Math.round((o.right / o.n) * 100), firstPct: o.fn ? Math.round((o.fr / o.fn) * 100) : null, topWrong: top ? { a: top[0], n: top[1] } : null };
+  }).sort((a, b) => a.pct - b.pct);
+  return json({
+    module: m, quiz, guide, passPct: await getPassPct(env), maxAttempts: polRow.results[0] ? polRow.results[0].max_attempts : 0,
+    trainees: users.map((u) => ({ id: u.id, name: u.name, email: u.email, completion: compBy[u.id] || 0, attempts: byUser[u.id] || [] })),
+    analytics, notes: notes.results.map((n) => ({ id: n.id, userId: n.user_id, note: n.note, author: n.author, at: n.at }))
+  });
+}
+
 async function adminCountOtherAdmins(env, id) {
   const r = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role='admin' AND id != ?").bind(id).first();
   return r.n;
@@ -552,6 +616,31 @@ async function adminAction(action, req, env, me) {
     if (r.error) return fail(r.error, r.status);
     return json({ ok: true, user: r.user });
   }
+  if (action === "guide") {
+    if (MODULE_IDS.indexOf(b.module) < 0) return fail("Unknown module.");
+    await env.DB.prepare("INSERT INTO guides (module_id, instructions, tools, updated_at, updated_by) VALUES (?,?,?,?,?) ON CONFLICT(module_id) DO UPDATE SET instructions = excluded.instructions, tools = excluded.tools, updated_at = excluded.updated_at, updated_by = excluded.updated_by")
+      .bind(b.module, clip(b.instructions, 8000), clip(b.tools, 8000), nowISO(), me.name).run();
+    return json({ ok: true });
+  }
+  if (action === "quizpolicy") {
+    if (QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+    const n = Math.round(Number(b.maxAttempts));
+    if (!(n >= 0 && n <= 20)) return fail("Attempts must be 0-20 (0 = unlimited).");
+    await env.DB.prepare("INSERT INTO quiz_policy (quiz_id, max_attempts) VALUES (?,?) ON CONFLICT(quiz_id) DO UPDATE SET max_attempts = excluded.max_attempts").bind(b.quiz, n).run();
+    return json({ ok: true });
+  }
+  if (action === "note") {
+    const note = clip(b.note, 2000).trim();
+    if (!note || MODULE_IDS.indexOf(b.module) < 0) return fail("Write a note first.");
+    const u = await env.DB.prepare("SELECT 1 AS x FROM users WHERE id = ?").bind(String(b.userId || "")).first();
+    if (!u) return fail("Not found.", 404);
+    await env.DB.prepare("INSERT INTO trainer_notes (id, user_id, module_id, note, author, at) VALUES (?,?,?,?,?,?)").bind("n_" + randHex(8), b.userId, b.module, note, me.name, nowISO()).run();
+    return json({ ok: true });
+  }
+  if (action === "notedelete") {
+    await env.DB.prepare("DELETE FROM trainer_notes WHERE id = ?").bind(String(b.id || "")).run();
+    return json({ ok: true });
+  }
   const id = String(b.id || "");
   const target = await env.DB.prepare("SELECT id, role FROM users WHERE id = ?").bind(id).first();
   if (!target) return fail("Not found.", 404);
@@ -577,6 +666,16 @@ async function adminAction(action, req, env, me) {
     ]);
     return json({ ok: true });
   }
+  if (action === "attemptreset") {
+    // lets the trainee take this quiz again: clears their attempts, answers and best score for it (reading progress is kept)
+    if (QUIZ_IDS.indexOf(b.quiz) < 0) return fail("Unknown quiz.");
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM attempt_answers WHERE user_id = ? AND quiz_id = ?").bind(id, b.quiz),
+      env.DB.prepare("DELETE FROM attempts WHERE user_id = ? AND quiz_id = ?").bind(id, b.quiz),
+      env.DB.prepare("DELETE FROM quizzes WHERE user_id = ? AND quiz_id = ?").bind(id, b.quiz)
+    ]);
+    return json({ ok: true });
+  }
   if (action === "aboutreset") {
     await env.DB.prepare("DELETE FROM about_progress WHERE user_id = ?").bind(id).run();
     return json({ ok: true });
@@ -587,7 +686,8 @@ async function adminAction(action, req, env, me) {
       env.DB.prepare("DELETE FROM module_completion WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM certificates WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM quizzes WHERE user_id = ?").bind(id),
-      env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id)
+      env.DB.prepare("DELETE FROM attempts WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM attempt_answers WHERE user_id = ?").bind(id)
     ]);
     return json({ ok: true });
   }
@@ -613,6 +713,8 @@ async function adminAction(action, req, env, me) {
       env.DB.prepare("DELETE FROM usage_events WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM about_progress WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM attempt_answers WHERE user_id = ?").bind(id),
+      env.DB.prepare("DELETE FROM trainer_notes WHERE user_id = ?").bind(id),
       env.DB.prepare("DELETE FROM users WHERE id = ?").bind(id)
     ]);
     return json({ ok: true });
@@ -663,6 +765,7 @@ export async function onRequest(context) {
       const action = route.slice(6);
       if (method === "GET" && action === "users") return await adminUsers(env);
       if (method === "GET" && action === "user") return await adminUser(env, url);
+      if (method === "GET" && action === "module") return await adminModule(env, url);
       if (method === "POST") return await adminAction(action, request, env, me);
     }
     return fail("Not found.", 404);

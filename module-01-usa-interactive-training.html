@@ -264,6 +264,7 @@ function tzAnswer(el,correct){
   document.getElementById("tzFeedback").textContent=correct?"✓ Correct! California is three hours behind Eastern Time.":"✗ Not quite. California is three hours behind Eastern Time.";
   document.getElementById("tzFeedback").style.color=correct?"#16834b":"#c73535";
 }
+window.DFQuizDef=questions.map(q=>({q:q[0],opts:q[1],a:q[2]}));
 function gradeQuiz(){
   let score=0, unanswered=0;
   questions.forEach((q,i)=>{

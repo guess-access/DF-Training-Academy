@@ -39,15 +39,19 @@
       if (typeof window.gradeQuiz === "function" && !window.gradeQuiz.__df) {
         var orig = window.gradeQuiz;
         window.gradeQuiz = function () {
+          var lk = me() && DF().quizLocked(ctx.quiz);
+          if (lk && lk.locked) { alert("Your trainer allows " + lk.max + " attempt(s) for this assessment and you have used them. Ask your trainer to reset it."); return; }
           var r = orig.apply(this, arguments);
           try {
             if (typeof questions !== "undefined" && questions.length && me()) {
-              var score = 0;
+              var score = 0, answers = [];
               questions.forEach(function (q, i) {
                 var sel = document.querySelector('input[name="q' + i + '"]:checked');
-                if (sel && Number(sel.value) === q[2]) score++;
+                var ok = !!sel && Number(sel.value) === q[2];
+                if (ok) score++;
+                answers.push({ q: q[0], p: sel ? q[1][Number(sel.value)] : null, c: q[1][q[2]], ok: ok });
               });
-              DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname });
+              DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname }, answers);
               if (Math.round(score / questions.length * 100) >= passPct()) DF().markModule(ctx.module, true);
             }
           } catch (e) {}
@@ -103,19 +107,29 @@
     }
     fb.appendChild(box);
   }
+  function csrAnsKey() { return "df_csr_ans_" + me().id; }
+  function csrAns() { try { return JSON.parse(localStorage.getItem(csrAnsKey())) || {}; } catch (e) { return {}; } }
   function csrMark(ctx, ok) {
     try {
       if (!me() || typeof cur === "undefined" || typeof P === "undefined") return;
+      var lk = DF().quizLocked(ctx.quiz);
+      if (lk.locked) return;
       var pages = csrPages(), marks = csrMarks();
       if (pages.indexOf(cur) < 0 || marks[cur] !== undefined) return;
       marks[cur] = !!ok;
+      var pk = window.__dfPick, pg = P[cur], am = csrAns();
+      am[cur] = pg.q ? { q: pg.q, p: pk ? pg.o[pk.i] : null, c: pg.o[pg.a], ok: !!ok } : { q: pg.t, p: null, c: "", ok: !!ok };
+      window.__dfPick = null;
+      localStorage.setItem(csrAnsKey(), JSON.stringify(am));
       if (pages.some(function (i) { return marks[i] === undefined; })) {
         localStorage.setItem(csrKey(), JSON.stringify(marks));
         return;
       }
       localStorage.removeItem(csrKey());
       var right = pages.filter(function (i) { return marks[i]; }).length;
-      DF().logQuiz(ctx.quiz, right, pages.length, { page: "csr_fundamentals" });
+      var answers = pages.map(function (i) { return am[i]; }).filter(Boolean);
+      localStorage.removeItem(csrAnsKey());
+      DF().logQuiz(ctx.quiz, right, pages.length, { page: "csr_fundamentals" }, answers);
       csrResult(ctx, right, pages.length);
       refreshWidget(ctx);
     } catch (e) {}
@@ -126,6 +140,7 @@
         var oAns = window.ans;
         window.ans = function (btn, i, a, w) {
           var r = oAns.apply(this, arguments);
+          window.__dfPick = { i: i };
           csrMark(ctx, i === a);
           return r;
         };
@@ -174,6 +189,8 @@
       document.documentElement.style.setProperty("--df-track-h", div.offsetHeight + "px");
       var logBtn = document.getElementById("dfScore");
       if (logBtn) logBtn.onclick = function () {
+        var lk = DF().quizLocked(ctx.quiz);
+        if (lk.locked) { alert("Your trainer allows " + lk.max + " attempt(s) for this assessment and you have used them. Ask your trainer to reset it."); return; }
         var v = prompt("Enter your quiz score 0-100 for " + ctx.quiz + ":");
         if (v === null) return;
         v = Number(v);

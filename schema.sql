@@ -112,3 +112,18 @@ CREATE TABLE IF NOT EXISTS about_progress (
 -- Gate is OFF by default; an admin turns it on (Admin dashboard) once the video file is in assets/.
 INSERT OR IGNORE INTO settings (key, value) VALUES ('aboutGate', '0');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('aboutMinSec', '300');
+
+-- Trainer view (admin): per-question answers, attempt limits, trainer notes, editable guides.
+CREATE TABLE IF NOT EXISTS attempt_answers (
+  attempt_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, quiz_id TEXT NOT NULL, answers TEXT NOT NULL, at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_aa_quiz ON attempt_answers(quiz_id);
+-- max_attempts: 0 = unlimited, 1 = one-time take
+CREATE TABLE IF NOT EXISTS quiz_policy (quiz_id TEXT PRIMARY KEY, max_attempts INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS trainer_notes (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL, module_id TEXT NOT NULL, note TEXT NOT NULL, author TEXT NOT NULL, at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notes ON trainer_notes(module_id, user_id);
+CREATE TABLE IF NOT EXISTS guides (
+  module_id TEXT PRIMARY KEY, instructions TEXT NOT NULL DEFAULT '', tools TEXT NOT NULL DEFAULT '', updated_at TEXT, updated_by TEXT
+);

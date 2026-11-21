@@ -20,47 +20,48 @@
 .cert-app{margin-top:10px;font-family:var(--font-body);}
 .cert-app *{box-sizing:border-box;}
 .cert-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:28px 0 34px;}
-.cert-stat{border:1px solid rgba(128,128,128,.22);border-radius:14px;padding:20px;}
+.cert-stat{border:1px solid rgba(128,128,128,.22);border-top:4px solid var(--c-cyan);border-radius:14px;padding:20px;background:#fff;}
+.cert-stat:nth-child(2){border-top-color:var(--c-violet);}.cert-stat:nth-child(3){border-top-color:var(--c-amber);}
 .cert-stat .cert-stat-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.6;margin:0 0 8px;}
-.cert-stat .cert-stat-value{font-family:var(--font-display);font-size:30px;font-weight:700;margin:0;}
+.cert-stat .cert-stat-value{font-family:var(--font-display);font-size:30px;font-weight:700;margin:0;color:var(--c-navy);}
 .cert-badge-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;}
 .cert-badge-pending{background:rgba(128,128,128,.15);color:#555;}
-.cert-badge-progress{background:color-mix(in srgb, var(--color-accent) 18%, transparent);color:#0a6b73;}
-.cert-badge-earned{background:#0a3d2e;color:#5cf0b8;}
+.cert-badge-progress{background:color-mix(in srgb, var(--c-violet) 12%, transparent);color:var(--c-violet);}
+.cert-badge-earned{background:var(--c-mint);color:var(--c-navy);}
 .cert-progress-track{height:10px;border-radius:999px;background:rgba(128,128,128,.18);overflow:hidden;margin-top:10px;}
-.cert-progress-fill{height:100%;background:var(--color-accent);border-radius:999px;transition:width .3s ease;}
+.cert-progress-fill{height:100%;background:linear-gradient(90deg,var(--c-amber),var(--c-mint));border-radius:999px;transition:width .3s ease;}
 .cert-section{margin:38px 0;}
-.cert-section h2{font-family:var(--font-display);font-size:22px;margin:0 0 4px;}
+.cert-section h2{font-family:var(--font-display);font-size:22px;margin:0 0 4px;color:var(--c-navy);}
 .cert-section .cert-section-sub{font-size:14px;opacity:.7;margin:0 0 18px;}
 .cert-module-list{display:flex;flex-direction:column;gap:10px;}
 .cert-module-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid rgba(128,128,128,.2);border-radius:12px;padding:14px 18px;flex-wrap:wrap;}
 .cert-module-row .cert-module-info{display:flex;align-items:center;gap:12px;}
 .cert-check{width:24px;height:24px;border-radius:7px;border:2px solid rgba(128,128,128,.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:14px;cursor:pointer;transition:.15s;}
-.cert-check.done{background:var(--color-accent);border-color:var(--color-accent);color:#04333a;}
+.cert-check.done{background:var(--c-mint);border-color:var(--c-mint);color:var(--c-navy);}
 .cert-module-name{font-weight:600;font-size:15px;}
 .cert-module-actions{display:flex;align-items:center;gap:12px;}
-.cert-link{font-size:13px;font-weight:600;color:var(--color-accent);}
+.cert-link{font-size:13px;font-weight:700;color:var(--c-violet);}
 .cert-toggle-btn{font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;border:1px solid rgba(128,128,128,.35);background:transparent;cursor:pointer;color:inherit;}
-.cert-toggle-btn:hover{border-color:var(--color-accent);}
+.cert-toggle-btn:hover{border-color:var(--c-violet);}
 .cert-assess-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
 .cert-assess-card{border:1px solid rgba(128,128,128,.22);border-radius:16px;padding:24px;}
 .cert-assess-card h3{margin:0 0 4px;font-size:17px;}
-.cert-assess-weight{font-size:12px;font-weight:700;color:var(--color-accent);text-transform:uppercase;letter-spacing:.04em;margin:0 0 12px;}
+.cert-assess-weight{font-size:12px;font-weight:700;color:var(--c-violet);text-transform:uppercase;letter-spacing:.04em;margin:0 0 12px;}
 .cert-assess-score{font-family:var(--font-display);font-size:26px;font-weight:700;margin:14px 0 2px;}
 .cert-assess-status{font-size:13px;opacity:.75;margin:0 0 14px;}
 .cert-quiz{margin-top:16px;border-top:1px solid rgba(128,128,128,.18);padding-top:16px;}
 .cert-q{margin:0 0 16px;}
 .cert-q p{font-weight:600;font-size:14px;margin:0 0 8px;}
 .cert-opt{display:block;padding:10px 12px;border:1px solid rgba(128,128,128,.28);border-radius:9px;margin:6px 0;cursor:pointer;font-size:13.5px;transition:.15s;}
-.cert-opt:hover{border-color:var(--color-accent);}
-.cert-opt.picked{border-color:var(--color-accent);background:color-mix(in srgb, var(--color-accent) 12%, transparent);}
+.cert-opt:hover{border-color:var(--c-violet);}
+.cert-opt.picked{border-color:var(--c-violet);background:color-mix(in srgb, var(--c-violet) 8%, transparent);}
 .cert-opt input{margin-right:9px;}
 .cert-final{border:1px solid rgba(128,128,128,.25);border-radius:16px;padding:28px;margin-top:8px;}
 .cert-final-score{font-family:var(--font-display);font-size:44px;font-weight:700;margin:6px 0;}
 .cert-name-input{padding:11px 14px;border-radius:9px;border:1px solid rgba(128,128,128,.35);font-size:14px;width:100%;max-width:320px;background:transparent;color:inherit;}
 .cert-btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;}
-.cert-btn-secondary{font-size:13px;font-weight:700;padding:11px 18px;border-radius:9px;border:1px solid rgba(128,128,128,.35);background:transparent;cursor:pointer;color:inherit;}
-.cert-btn-secondary:hover{border-color:var(--color-accent);}
+.cert-btn-secondary{font-size:13px;font-weight:700;padding:11px 20px;border-radius:999px;border:1px solid rgba(128,128,128,.35);background:transparent;cursor:pointer;color:inherit;}
+.cert-btn-secondary:hover{border-color:var(--c-violet);}
 </style>
 </head>
 <body>

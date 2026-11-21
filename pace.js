@@ -25,7 +25,7 @@
   var adapter = null;
   var curKey = null;
   var pill = null, pillTimer = null;
-  var MOD = { "module-01-usa-interactive-training": "m1", "module-02-vehicle101-interactive-training": "m2", "module-03-software-tools": "m3", "csr_fundamentals": "m4", "module-05-certification": "m5", "module-06-refresher-courses": "m6" }[file];
+  var MOD = { "module-01-usa": "m1", "module-01-usa-interactive-training": "m1", "module-02-vehicle101-interactive-training": "m2", "module-03-software-tools": "m3", "csr_fundamentals": "m4", "module-05-certification": "m5", "module-06-refresher-courses": "m6" }[file];
   var sent = {};             // pageKey -> highest read % the server already has
 
   function loadDone() { try { done = JSON.parse(localStorage.getItem("df_pace_v1_" + uid) || "{}"); } catch (e) { done = {}; } }
@@ -124,7 +124,8 @@
   function tick() {
     var cur = adapter.current(); if (!cur) return;
     var m = mem[key(cur.id)];
-    if (m && document.visibilityState === "visible") m.dwell += 1;
+    var el = adapter.el(cur), shown = window.innerHeight > 0 && el && el.getClientRects().length > 0;
+    if (m && document.visibilityState === "visible" && shown) m.dwell += 1;   // only while the lesson is actually on screen
     evaluate();
   }
 
@@ -154,7 +155,7 @@
 
   /* ---- adapters ---- */
   function adapterM1() { // Module 1 interactive: sections .page, sidebar .nav-btn, "Start Training" in .actions
-    if (typeof window.showPage !== "function" || !document.querySelector(".sidebar .nav-btn")) return null;
+    if (typeof window.showPage !== "function" || !document.querySelector(".sidebar .nav-btn")) return null; // Module 1: lesson buttons (.m1-tabs.sidebar)
     var pages = [].slice.call(document.querySelectorAll("main .page")).filter(function (p) { return p.id !== "assessment"; }).map(function (p) { return { id: p.id, el: p }; });
     var navs = [].slice.call(document.querySelectorAll(".sidebar .nav-btn"));
     function curIdx() { for (var i = 0; i < pages.length; i++) if (!pages[i].el.classList.contains("hidden")) return i; return 0; }
@@ -294,5 +295,6 @@
     setTimeout(evaluate, 200);
     window.DFPace = { progress: function () { var c = adapter.current(); return c ? progress(c.id) : 0; }, isDone: isDone };
   }
-  DFAuth.onReady(start);
+  // DFPaceReady tells a module page that embeds this lesson app when it is safe to drive it (locks are in place)
+  DFAuth.onReady(function () { try { start(); } finally { window.DFPaceReady = true; } });
 })();

@@ -81,18 +81,25 @@
     </div>
     <div class="ml-track" id="dfTrackSlot"></div>
   </section>
-  <section class="ml-card">
-    <h2>Welcome to Module 5</h2>
+  <nav class="mod-tabs" aria-label="Module lessons">
+    <button type="button" class="mod-tab" data-tab="welcome">🏠 Welcome</button>
+    <button type="button" class="mod-tab" data-tab="required">📋 Required Modules</button>
+    <button type="button" class="mod-tab" data-tab="final">🎓 Final Assessment</button>
+  </nav>
+  <div class="mod-panel">
+    <section data-tab-panel="welcome">
+      <h2>Welcome to Module 5</h2>
     <p class="ml-desc">Track your progress toward graduation. Complete all required modules and pass the final assessment to earn your Graduation Certificate.</p>
     <ol class="ml-lessons">
       <li><strong>Required Modules</strong> — Modules 1 to 4 must be Completed first. They are marked automatically when you finish them.</li>
       <li><strong>Final Written Assessment</strong> — Written knowledge check covering vehicle basics, recalls, geography, systems, and policy from Modules 1–4.</li>
     </ol>
-    <div class="ml-actions"><a class="ml-start" href="#certApp" onclick="event.preventDefault();document.getElementById('certApp').scrollIntoView({behavior:'smooth'})">Start Training &rarr;</a></div>
-  </section>
+      <div class="ml-actions"><a class="ml-start" href="#" data-open-tab="required">Start Training &rarr;</a></div>
+    </section>
+
 
   <div class="cert-app" id="certApp">
-
+    <section data-tab-panel="required" hidden>
     <div class="cert-overview">
       <div class="cert-stat">
         <p class="cert-stat-label">Modules Complete</p>
@@ -115,6 +122,9 @@
       <p class="cert-section-sub">These four modules must be Completed first. They are marked automatically when you finish them.</p>
       <div class="cert-module-list" id="moduleList"></div>
     </div>
+
+    </section>
+    <section data-tab-panel="final" hidden>
 
     <div class="cert-section">
       <h2>Final Certification</h2>
@@ -144,8 +154,10 @@
         <div id="certificateArea"></div>
       </div>
     </div>
-
+    </section>
   </div>
+  </div>
+
 <div class="df-next-row" style="margin:32px 0 190px"><a class="cta-button" data-df-next href="/user-dashboard">Finish: View My Progress →</a></div>
 </main>
 <footer class="site-footer sec-footer">
@@ -153,7 +165,7 @@
   
 </footer>
 
-<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script><script src="certificate.js"></script>
+<script src="module-tabs.js"></script><script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script><script src="certificate.js"></script>
 <script>
 (function(){
   const moduleDefs = [

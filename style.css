@@ -189,3 +189,18 @@ a{color:inherit;text-decoration:none;}
 .ml-start{display:inline-flex;align-items:center;gap:6px;background:#1f5eff;color:#fff;font-weight:700;font-size:16px;border-radius:9px;padding:13px 20px;box-shadow:0 6px 18px -8px rgba(31,94,255,.8);transition:transform .15s;}
 .ml-start:hover{transform:translateY(-1px);}
 @media (max-width:640px){.ml-hero{padding:26px 22px;}.ml-card{padding:22px 18px;}.ml-lessons{padding:14px 16px 14px 36px;}.ml-actions{justify-content:stretch;}.ml-start{width:100%;justify-content:center;}.ml-track{width:100%;}.ml-track #dfTrack{max-width:none !important;}}
+
+/* ===== Module lesson buttons + white panel (Modules 2-6; Module 1 has its own copy in module-01-usa.html) ===== */
+.mod-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px;}
+.mod-tabs .mod-tab{display:inline-flex;align-items:center;gap:8px;border:1px solid #d5dcf0;background:#fff;color:#071b49;font:700 15px Arial,Helvetica,sans-serif;padding:12px 18px;border-radius:12px;cursor:pointer;text-decoration:none;}
+.mod-tabs .mod-tab:hover{border-color:#1f5eff;}
+.mod-tabs .mod-tab.active{background:#071b49;border-color:#071b49;color:#fff;}
+.mod-tabs .mod-tab.df-locked{opacity:.45;cursor:not-allowed;filter:grayscale(.5);}
+.mod-panel{background:#fff;border-radius:16px;padding:32px;margin-bottom:24px;box-shadow:0 4px 18px rgba(20,35,70,.07);}
+.mod-panel [data-tab-panel][hidden]{display:none !important;}
+.mod-panel h2{font-family:var(--font-display);font-size:clamp(22px,2.4vw,28px);margin:0 0 12px;color:#111;}
+.mod-panel .ml-note-box{background:#eef4ff;border-left:4px solid #1f5eff;padding:15px;border-radius:8px;line-height:1.5;margin-top:20px;}
+.mod-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:12px;background:#f4f7fb;}
+.mod-panel.has-frame{padding:14px;}
+.mod-panel.has-frame [data-tab-panel="welcome"]{padding:18px 18px 8px;}
+@media (max-width:640px){.mod-panel{padding:22px 16px;}.mod-panel.has-frame{padding:8px;}.mod-tabs .mod-tab{flex:1 1 calc(50% - 10px);justify-content:center;padding:11px 10px;font-size:14px;}.mod-frame{height:calc(100vh - 120px);min-height:480px;}}

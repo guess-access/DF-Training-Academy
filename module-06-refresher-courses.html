@@ -102,32 +102,28 @@ body{overflow-x:hidden;}
     </div>
     <div class="ml-track" id="dfTrackSlot"></div>
   </section>
-  <section class="ml-card">
-    <h2>Welcome to Module 6</h2>
+  <nav class="mod-tabs" aria-label="Module lessons">
+    <button type="button" class="mod-tab" data-tab="welcome">🏠 Welcome</button>
+    <button type="button" class="mod-tab" data-tab="coaching">🎧 Call Coaching</button>
+  </nav>
+  <div class="mod-panel has-frame">
+    <section data-tab-panel="welcome">
+      <h2>Welcome to Module 6</h2>
     <p class="ml-desc">Short, periodic refreshers on policy updates, new procedures, and common call issues. Designed to keep certified reps sharp without repeating full training.</p>
     <ol class="ml-lessons">
       <li><strong>Customer Service Training - Call Coaching</strong></li>
     </ol>
-    <div class="ml-actions"><a class="ml-start" href="#training-embed-panel" onclick="event.preventDefault();var p=document.getElementById('training-embed-panel');if(!p.classList.contains('is-open'))document.querySelector('.training-toggle-btn').click();document.querySelector('.training-embed-wrap').scrollIntoView({behavior:'smooth'})">Start Training &rarr;</a></div>
-  </section>
+      <div class="ml-actions"><a class="ml-start" href="#" data-open-tab="coaching">Start Training &rarr;</a></div>
+    </section>
+    <section data-tab-panel="coaching" hidden>
+      <iframe class="mod-frame" id="training-embed-frame" title="Customer Service Training - Call Coaching" allow="clipboard-write"></iframe>
+    </section>
+  </div>
 
-  <section class="training-embed-wrap" aria-label="Customer Service Training">
-    <button type="button" class="training-toggle-btn" aria-expanded="false" aria-controls="training-embed-panel" onclick="
-      var panel = document.getElementById('training-embed-panel');
-      var isOpen = panel.classList.toggle('is-open');
-      this.setAttribute('aria-expanded', isOpen);
-      var frame = document.getElementById('training-embed-frame');
-      if (isOpen) { dfLoadTraining(frame); }
-    ">
-      <span>Customer Service Training - Call Coaching</span>
-      <span class="chevron" aria-hidden="true"></span>
-    </button>
-    <div class="training-embed-panel" id="training-embed-panel">
-      <iframe id="training-embed-frame" class="training-embed" data-src="training-1.html" title="Customer Service Training - Call Coaching" loading="lazy" allow="clipboard-write"></iframe>
-    </div>
-  </section>
+
 <script>
 function dfLoadTraining(frame){
+  frame.dataset.src=frame.dataset.src||"training-1.html";
   if(frame.dataset.checked) return;
   frame.dataset.checked='1';
   fetch(frame.dataset.src,{method:'HEAD',cache:'no-store'}).then(function(r){
@@ -148,5 +144,5 @@ function dfLoadTraining(frame){
   <span>© 2026 Dealerfocus Training Academy | All rights reserved.</span>
   
 </footer>
-<script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>
+<script src="module-tabs.js"></script><script>document.addEventListener("dftab",function(e){if(e.detail.tab==="coaching")dfLoadTraining(document.getElementById("training-embed-frame"));});</script><script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script></body>
 </html>

@@ -86,6 +86,14 @@ Every module's entry page (`module-01-usa.html` to `module-06-refresher-courses.
 header with the module title, subtitle, **Back to Modules Tab** and the progress box, then a **Welcome to Module N** card listing
 its lessons and a **Start Training** button (styles: "Module landing" block in `style.css`). Start Training opens the interactive
 training (Modules 1, 2), the walkthrough or lesson window (Modules 3, 4), or scrolls to the assessment (5) or refresher (6).
+**Module 1** is a single page: its lessons (Welcome, States, Time Zones, the in-page assessment) open inside the white panel
+from a row of lesson buttons under the header (`.m1-tabs`), with the same 50% pacing as before. The old address
+`module-01-usa-interactive-training` now forwards to `/module-01-usa`; progress carries over because it is saved per lesson.
+**Modules 2 to 6** use the same layout through `module-tabs.js` (buttons `.mod-tabs [data-tab]`, panels `[data-tab-panel]`):
+Module 2 and Module 4 load their lesson apps (`module-02-vehicle101-interactive-training.html`, `csr_fundamentals.html`) inside the
+white panel with `?embed=1` (their own header/sidebar hidden) and the buttons drive them, so their 50% pacing runs unchanged inside;
+Module 3 shows the Scheduler Training Hub, Module 6 the Call Coaching course, and Module 5 splits into Required Modules and Final
+Assessment. `pace.js` sets `window.DFPaceReady` once its locks are in place and only counts reading time while the lesson is on screen.
 `bridge.js` puts the progress box in the header slot `#dfTrackSlot` when a page has one; in Trainer view preview it reads
 "Preview — nothing is recorded".
 

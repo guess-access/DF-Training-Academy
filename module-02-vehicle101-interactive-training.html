@@ -285,14 +285,35 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
 
     .service-dialog {
       margin: auto; /* the page resets all margins to 0; a pop-up needs auto to sit in the middle */
-      width: min(760px, 94vw);
-      max-height: 88vh;
+      /* fill the lesson area, leaving a small margin all round */
+      width: calc(100vw - 24px);
+      max-width: none;
+      height: calc(100vh - 24px);
+      max-height: none;
+      flex-direction: column;
       padding: 0;
       border: 0;
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 30px 70px -20px rgba(5, 1, 65, 0.6);
     }
+
+    .service-dialog[open] { display: flex; }
+
+    /* Segment 1 has two big topic tiles: let them share the full row */
+    .topic-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .topic-grid .service-tile { min-height: 170px; padding: 22px 22px 18px; }
+    .topic-grid .service-tile h3 { font-size: 18px; }
+    .topic-grid .service-tile p { font-size: 13.5px; }
+    .service-details .expandable-content { display: block; padding: 0; border: 0; }
+
+    /* in the wide pop-up: pictures and videos stay a sensible size (centered), text lines stay easy to read */
+    .service-details img,
+    .service-details video { max-width: min(100%, 900px) !important; display: block; margin-left: auto !important; margin-right: auto !important; }
+    .service-details p,
+    .service-details li,
+    .service-details h4,
+    .service-details .key-points { max-width: 110ch; }
 
     .service-dialog::backdrop { background: rgba(5, 1, 65, 0.55); }
 
@@ -322,8 +343,9 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
     }
 
     .service-details {
-      padding: 18px 20px 22px;
-      max-height: calc(88vh - 76px);
+      padding: 22px 28px 28px;
+      flex: 1;
+      min-height: 0;
       overflow: auto;
       font-size: 14px;
       color: var(--text-secondary);
@@ -493,6 +515,16 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
 
     <!-- CAR PARTS TAB -->
     <div id="parts" class="tab-content active">
+      <div class="section">
+        <div class="section-header">
+          <i class="fas fa-car"></i>
+          Car Parts &amp; Brands
+        </div>
+        <div class="section-description">
+          Two topics in this segment. Click a tile to open it.
+        </div>
+        <div class="service-grid topic-grid" id="partsGrid"></div>
+      </div>
       <div class="expandable-section expanded">
         <div class="expandable-header" onclick="toggleExpandable(this)">
           <h3>Introduction to Car Parts</h3>
@@ -920,8 +952,8 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
       });
     }
 
-    /* one pop-up for all service tiles */
-    function openService(service, detailsHTML) {
+    /* one pop-up for all tiles (Auto Services and the Segment 1 topics) */
+    function openDialog(title, desc, fill) {
       let dlg = document.getElementById('serviceDialog');
       if (!dlg) {
         dlg = document.createElement('dialog');
@@ -932,14 +964,59 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
           '<button type="button" class="service-dialog-close">Close ✕</button></div><div class="service-details" id="serviceDialogBody"></div>';
         dlg.querySelector('.service-dialog-close').onclick = () => dlg.close();
         dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });   // click outside the box closes it
-        dlg.addEventListener('close', () => dlg.querySelectorAll('video').forEach(v => v.pause()));
+        dlg.addEventListener('close', () => {
+          dlg.querySelectorAll('video').forEach(v => v.pause());
+          if (dlg._restore) { dlg._restore(); dlg._restore = null; }   // a topic's content goes back where it came from
+        });
         document.body.appendChild(dlg);
       }
-      dlg.querySelector('#serviceDialogTitle').textContent = service.title;
-      dlg.querySelector('#serviceDialogDesc').textContent = service.desc;
-      dlg.querySelector('#serviceDialogBody').innerHTML = detailsHTML;
+      if (dlg._restore) { dlg._restore(); dlg._restore = null; }
+      const body = dlg.querySelector('#serviceDialogBody');
+      dlg.querySelector('#serviceDialogTitle').textContent = title;
+      dlg.querySelector('#serviceDialogDesc').textContent = desc;
+      body.innerHTML = '';
+      dlg._restore = fill(body) || null;
+      // bring the whole lesson area on screen (just under the progress bar at the top) so the pop-up is fully visible
+      try {
+        const fr = window.frameElement, top = window.parent;
+        if (fr && top !== window) {
+          const bar = top.document.getElementById('dfPace'), barH = bar ? bar.offsetHeight : 0;
+          top.scrollTo({ top: fr.getBoundingClientRect().top + top.scrollY - barH - 8, behavior: 'smooth' });
+        }
+      } catch (e) {}
       dlg.showModal();
-      dlg.querySelector('#serviceDialogBody').scrollTop = 0;
+      body.scrollTop = 0;
+    }
+    function openService(service, detailsHTML) {
+      openDialog(service.title, service.desc, body => { body.innerHTML = detailsHTML; });
+    }
+
+    /* Segment 1: each topic section becomes a tile; its content (pictures, videos, brand cards) opens in the pop-up */
+    function buildTopics() {
+      const grid = document.getElementById('partsGrid');
+      if (!grid) return;
+      const blurb = {
+        'Introduction to Car Parts': 'The main parts of a car and what each one does, with two short videos.',
+        'Vehicle Make and Model': 'Make vs. model, and the common models for each car brand.'
+      };
+      document.querySelectorAll('#parts .expandable-section').forEach((sec, i) => {
+        const title = sec.querySelector('.expandable-header h3').textContent.trim();
+        const content = sec.querySelector('.expandable-content');
+        const desc = blurb[title] || '';
+        sec.hidden = true;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'service-tile';
+        card.setAttribute('aria-haspopup', 'dialog');
+        card.innerHTML = `
+          <span class="tile-num">Topic ${i + 1}</span>
+          <h3>${title}</h3>
+          <p>${desc}</p>
+          <span class="tile-more">Open topic →</span>
+        `;
+        card.onclick = () => openDialog(title, desc, body => { body.appendChild(content); return () => sec.appendChild(content); });
+        grid.appendChild(card);
+      });
     }
 
     function showTab(tabName) {
@@ -1050,10 +1127,21 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
 
     // Initialize
     buildServices();
+    buildTopics();
     updateProgress();
   </script>
 
 <script src="auth.js"></script><script src="bridge.js"></script><script src="pace.js"></script><script>
+/* Inside the Module 2 page: links to the assessment form open the page's Assessment tab instead of leaving.
+   A locked link never gets here (pace.js stops the click first). */
+(function(){
+  if(!document.documentElement.classList.contains("df-embed")) return;
+  document.addEventListener("click",function(e){
+    var a=e.target.closest&&e.target.closest('a[href*="docs.google.com/forms"]');
+    if(!a||e.defaultPrevented) return;
+    try{ if(window.parent!==window&&window.parent.DFTabs){ e.preventDefault(); window.parent.DFTabs.show("assessment"); } }catch(err){}
+  });
+})();
 /* A video whose file is not uploaded yet shows a note instead of a dead player. Adding the file brings the player back. */
 (function(){
   function soon(v){

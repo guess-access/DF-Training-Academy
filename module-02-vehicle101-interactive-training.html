@@ -210,76 +210,124 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
       line-height: 1.6;
     }
 
+    /* Auto Services: floating tiles; a tile turns dark navy on hover and opens its details in a pop-up */
     .service-grid {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 18px;
+      padding: 6px 2px 12px;
     }
 
-    .service-card {
-      background: var(--surface-2);
-      border: 0.5px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: all 0.15s ease-out;
-    }
-
-    .service-card:hover {
-      border-color: var(--border-strong);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-    }
-
-    .service-header {
-      padding: 12px 16px;
-      background: var(--surface-1);
+    .service-tile {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 132px;
+      text-align: left;
+      font: inherit;
+      color: var(--text-primary);
+      background: #ffffff;
+      border: 1px solid rgba(5, 1, 65, 0.08);
+      border-radius: 14px;
+      padding: 18px 18px 16px;
       cursor: pointer;
+      box-shadow: 0 14px 30px -16px rgba(5, 1, 65, 0.38), 0 2px 6px rgba(5, 1, 65, 0.06);
+      transition: transform 0.18s ease-out, box-shadow 0.18s ease-out, background 0.18s ease-out, color 0.18s ease-out;
+    }
+
+    .service-tile .tile-num {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--fill-accent);
+    }
+
+    .service-tile h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .service-tile p {
+      flex: 1;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .service-tile .tile-more {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--fill-accent);
+    }
+
+    .service-tile:hover,
+    .service-tile:focus-visible {
+      background: #050141;
+      color: #ffffff;
+      border-color: #050141;
+      transform: translateY(-5px);
+      box-shadow: 0 22px 38px -16px rgba(5, 1, 65, 0.65);
+      outline: none;
+    }
+
+    .service-tile:hover p,
+    .service-tile:focus-visible p { color: rgba(255, 255, 255, 0.78); }
+
+    .service-tile:hover .tile-num,
+    .service-tile:hover .tile-more,
+    .service-tile:focus-visible .tile-num,
+    .service-tile:focus-visible .tile-more { color: #00EEFF; }
+
+    .service-tile:focus-visible { box-shadow: 0 0 0 3px #00EEFF, 0 22px 38px -16px rgba(5, 1, 65, 0.65); }
+
+    .service-dialog {
+      margin: auto; /* the page resets all margins to 0; a pop-up needs auto to sit in the middle */
+      width: min(760px, 94vw);
+      max-height: 88vh;
+      padding: 0;
+      border: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 30px 70px -20px rgba(5, 1, 65, 0.6);
+    }
+
+    .service-dialog::backdrop { background: rgba(5, 1, 65, 0.55); }
+
+    .service-dialog-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 14px;
+      background: #050141;
+      color: #ffffff;
+      padding: 16px 20px;
     }
 
-    .service-header:hover {
-      background: var(--surface-2);
-    }
+    .service-dialog-head h3 { font-size: 17px; margin: 0; }
+    .service-dialog-head p { font-size: 12.5px; margin: 3px 0 0; color: rgba(255, 255, 255, 0.75); }
 
-    .service-title {
-      flex: 1;
-    }
-
-    .service-title h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-    }
-
-    .service-title p {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .toggle-icon {
-      color: var(--text-secondary);
-      font-size: 16px;
-      transition: transform 0.2s ease-out;
-    }
-
-    .service-card.expanded .toggle-icon {
-      transform: rotate(180deg);
+    .service-dialog-close {
+      flex-shrink: 0;
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 18px;
+      background: #00EEFF;
+      color: #050141;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     .service-details {
-      padding: 16px;
-      border-top: 0.5px solid var(--border);
+      padding: 18px 20px 22px;
+      max-height: calc(88vh - 76px);
+      overflow: auto;
       font-size: 14px;
       color: var(--text-secondary);
       line-height: 1.6;
-      display: none;
-    }
-
-    .service-card.expanded .service-details {
-      display: block;
     }
 
     .key-points {
@@ -439,27 +487,12 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
     </div>
 
     <div class="tab-nav">
-      <button class="tab-btn active" onclick="showTab('services')">Auto Services</button>
-      <button class="tab-btn" onclick="showTab('parts')">Car Parts & Brands</button>
-    </div>
-
-    <!-- AUTO SERVICES TAB -->
-    <div id="services" class="tab-content active">
-      <div class="section">
-        <div class="section-header">
-          <i class="fas fa-tools"></i>
-          Nine Common Auto Services
-        </div>
-        <div class="section-description">
-          Learn about the services offered at the service center. Click each service to expand details.
-        </div>
-        <div class="service-grid" id="servicesGrid"></div>
-      </div>
-      <div class="tab-next"><button type="button" class="tab-next-btn" onclick="showTab('parts');if(document.getElementById('parts').classList.contains('active'))window.scrollTo(0,0)">Next: Car Parts &amp; Brands →</button></div>
+      <button class="tab-btn active" onclick="showTab('parts')">Car Parts & Brands</button>
+      <button class="tab-btn" onclick="showTab('services')">Auto Services</button>
     </div>
 
     <!-- CAR PARTS TAB -->
-    <div id="parts" class="tab-content">
+    <div id="parts" class="tab-content active">
       <div class="expandable-section expanded">
         <div class="expandable-header" onclick="toggleExpandable(this)">
           <h3>Introduction to Car Parts</h3>
@@ -517,9 +550,24 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin: 16px 0;" id="makeGrid"></div>
         </div>
       </div>
-      <div class="tab-next"><a class="tab-next-btn" data-df-next-module href="/module-03-software-tools">Next Module: Program Software &amp; Tools →</a><a class="tab-next-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform" target="_blank" rel="noopener">Next: Assessment →</a></div>
+      <div class="tab-next"><button type="button" class="tab-next-btn" onclick="showTab('services');if(document.getElementById('services').classList.contains('active'))window.scrollTo(0,0)">Next: Auto Services →</button></div>
     </div>
 
+
+    <!-- AUTO SERVICES TAB -->
+    <div id="services" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <i class="fas fa-tools"></i>
+          Nine Common Auto Services
+        </div>
+        <div class="section-description">
+          Learn about the services offered at the service center. Click a tile to see its details.
+        </div>
+        <div class="service-grid" id="servicesGrid"></div>
+      </div>
+      <div class="tab-next"><a class="tab-next-btn" data-df-next-module href="/module-03-software-tools">Next Module: Program Software &amp; Tools →</a><a class="tab-next-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSe7SVf3i3pePoB2Uuguv3cEXGyvR3xyWlgg4rkZPedJc-GK3g/viewform" target="_blank" rel="noopener">Next: Assessment →</a></div>
+    </div>
   </div>
 
   <div class="footer">
@@ -597,8 +645,9 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
     function buildServices() {
       const grid = document.getElementById('servicesGrid');
       services.forEach(service => {
-        const card = document.createElement('div');
-        card.className = 'service-card';
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'service-tile';
         
         let detailsHTML = `<p>${service.details}</p>`;
         
@@ -857,21 +906,40 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
           `;
         }
         
+        const num = grid.children.length + 1;
         card.innerHTML = `
-          <div class="service-header" onclick="this.parentElement.classList.toggle('expanded')">
-            <div class="service-title">
-              <h3>${service.title}</h3>
-              <p>${service.desc}</p>
-            </div>
-            <i class="fas fa-chevron-down toggle-icon"></i>
-          </div>
-          <div class="service-details">
-            ${detailsHTML}
-          </div>
+          <span class="tile-num">Service ${num}</span>
+          <h3>${service.title}</h3>
+          <p>${service.desc}</p>
+          <span class="tile-more">View details →</span>
         `;
-        
+        card.setAttribute('aria-haspopup', 'dialog');
+        card.onclick = () => openService(service, detailsHTML);
+
         grid.appendChild(card);
       });
+    }
+
+    /* one pop-up for all service tiles */
+    function openService(service, detailsHTML) {
+      let dlg = document.getElementById('serviceDialog');
+      if (!dlg) {
+        dlg = document.createElement('dialog');
+        dlg.id = 'serviceDialog';
+        dlg.className = 'service-dialog';
+        dlg.setAttribute('aria-labelledby', 'serviceDialogTitle');
+        dlg.innerHTML = '<div class="service-dialog-head"><div><h3 id="serviceDialogTitle"></h3><p id="serviceDialogDesc"></p></div>' +
+          '<button type="button" class="service-dialog-close">Close ✕</button></div><div class="service-details" id="serviceDialogBody"></div>';
+        dlg.querySelector('.service-dialog-close').onclick = () => dlg.close();
+        dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });   // click outside the box closes it
+        dlg.addEventListener('close', () => dlg.querySelectorAll('video').forEach(v => v.pause()));
+        document.body.appendChild(dlg);
+      }
+      dlg.querySelector('#serviceDialogTitle').textContent = service.title;
+      dlg.querySelector('#serviceDialogDesc').textContent = service.desc;
+      dlg.querySelector('#serviceDialogBody').innerHTML = detailsHTML;
+      dlg.showModal();
+      dlg.querySelector('#serviceDialogBody').scrollTop = 0;
     }
 
     function showTab(tabName) {
@@ -973,7 +1041,7 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
 
     function updateProgress() {
       const activeTab = document.querySelector('.tab-content.active');
-      if (activeTab.id === 'services') {
+      if (activeTab.id === 'parts') {
         document.getElementById('progress').style.width = '50%';
       } else {
         document.getElementById('progress').style.width = '100%';

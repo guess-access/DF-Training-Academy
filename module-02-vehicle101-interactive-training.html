@@ -285,14 +285,28 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
 
     .service-dialog {
       margin: auto; /* the page resets all margins to 0; a pop-up needs auto to sit in the middle */
-      width: min(760px, 94vw);
-      max-height: 88vh;
+      /* fill the lesson area, leaving a small margin all round */
+      width: calc(100vw - 24px);
+      max-width: none;
+      height: calc(100vh - 24px);
+      max-height: none;
+      flex-direction: column;
       padding: 0;
       border: 0;
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 30px 70px -20px rgba(5, 1, 65, 0.6);
     }
+
+    .service-dialog[open] { display: flex; }
+
+    /* in the wide pop-up: pictures and videos stay a sensible size (centered), text lines stay easy to read */
+    .service-details img,
+    .service-details video { max-width: min(100%, 900px) !important; display: block; margin-left: auto !important; margin-right: auto !important; }
+    .service-details p,
+    .service-details li,
+    .service-details h4,
+    .service-details .key-points { max-width: 110ch; }
 
     .service-dialog::backdrop { background: rgba(5, 1, 65, 0.55); }
 
@@ -322,8 +336,9 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
     }
 
     .service-details {
-      padding: 18px 20px 22px;
-      max-height: calc(88vh - 76px);
+      padding: 22px 28px 28px;
+      flex: 1;
+      min-height: 0;
       overflow: auto;
       font-size: 14px;
       color: var(--text-secondary);
@@ -938,6 +953,14 @@ if (/[?&]embed=1(&|$)/.test(location.search)) { document.documentElement.classLi
       dlg.querySelector('#serviceDialogTitle').textContent = service.title;
       dlg.querySelector('#serviceDialogDesc').textContent = service.desc;
       dlg.querySelector('#serviceDialogBody').innerHTML = detailsHTML;
+      // bring the whole lesson area on screen (just under the progress bar at the top) so the pop-up is fully visible
+      try {
+        const fr = window.frameElement, top = window.parent;
+        if (fr && top !== window) {
+          const bar = top.document.getElementById('dfPace'), barH = bar ? bar.offsetHeight : 0;
+          top.scrollTo({ top: fr.getBoundingClientRect().top + top.scrollY - barH - 8, behavior: 'smooth' });
+        }
+      } catch (e) {}
       dlg.showModal();
       dlg.querySelector('#serviceDialogBody').scrollTop = 0;
     }

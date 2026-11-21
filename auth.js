@@ -169,7 +169,8 @@
     var rec = { id: uid(), quiz: quizId, score: pct, raw: score, total: total, passed: passed, at: nowISO() };
     if (extra) rec.extra = extra;
     S.attempts.push(rec);
-    write("quiz", { quiz: quizId, raw: score, total: total, extra: extra || null, answers: answers || null });
+    // the save request, so a page can confirm the attempt reached the server (not enumerable: never sent or stored)
+    Object.defineProperty(rec, "save", { value: write("quiz", { quiz: quizId, raw: score, total: total, extra: extra || null, answers: answers || null }) });
     return rec;
   }
 

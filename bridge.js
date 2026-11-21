@@ -43,7 +43,9 @@
           if (lk && lk.locked) { alert("Your trainer allows " + lk.max + " attempt(s) for this assessment and you have used them. Ask your trainer to reset it."); return; }
           var r = orig.apply(this, arguments);
           try {
-            if (typeof questions !== "undefined" && questions.length && me()) {
+            // only a complete submission counts (an incomplete one is refused with "Please answer all questions")
+            var complete = typeof questions !== "undefined" && questions.every(function (q, i) { return !!document.querySelector('input[name="q' + i + '"]:checked'); });
+            if (complete && questions.length && me()) {
               var score = 0, answers = [];
               questions.forEach(function (q, i) {
                 var sel = document.querySelector('input[name="q' + i + '"]:checked');
@@ -51,8 +53,19 @@
                 if (ok) score++;
                 answers.push({ q: q[0], p: sel ? q[1][Number(sel.value)] : null, c: q[1][q[2]], ok: ok });
               });
-              DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname }, answers);
+              var notIn = function () { return Promise.resolve({ error: "You are not signed in." }); };
+              var rec = DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname }, answers);
+              // "Record Assessment Result" waits on this; it re-sends once only if the first save failed
+              window.DFQuizSave = {
+                promise: rec && rec.save ? rec.save : notIn(),
+                retry: function () {
+                  var again = DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname, retry: true }, answers);
+                  this.promise = again && again.save ? again.save : notIn();
+                  return this.promise;
+                }
+              };
               if (Math.round(score / questions.length * 100) >= passPct()) DF().markModule(ctx.module, true);
+              refreshWidget(ctx); // show the new best score (and Completed, once earned) in the box at the top right away
             }
           } catch (e) {}
           return r;
@@ -183,7 +196,7 @@
         '<div style="font-weight:800;margin:4px 0">' + (preview ? 'Preview — nothing is recorded' : done ? '✓ Completed' : 'In progress — auto-recorded') + (q ? ' • Best: ' + q.score + '%' : '') + '</div>' +
         '<div class="df-hint" style="font-size:12px;opacity:.75">' + (preview ? 'You are previewing this module as a trainee.' : 'Quiz + activity feed your progress page automatically.') + '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
-        (!preview && (ctx.module === "m1" || ctx.module === "m2") ? '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' : '') +
+        (!preview && ctx.module === "m2" ? '<button id="dfScore" style="border:0;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;background:#fff;color:#050141">Log score</button>' : '') +
         '<a href="' + dash + '" style="border-radius:8px;padding:8px 12px;font-weight:800;background:transparent;color:#fff;border:1px solid #fff;text-decoration:none;font-size:13px">My progress</a>' +
         '</div>';
       // module landing pages have a slot in the dark header for this box; elsewhere it floats bottom-right

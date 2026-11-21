@@ -55,6 +55,7 @@
               });
               DF().logQuiz(ctx.quiz, score, questions.length, { page: location.pathname }, answers);
               if (Math.round(score / questions.length * 100) >= passPct()) DF().markModule(ctx.module, true);
+              refreshWidget(ctx); // show the new best score (and Completed, once earned) in the box at the top right away
             }
           } catch (e) {}
           return r;

@@ -162,6 +162,7 @@
     {q:"Which best separates a recall from routine maintenance?", opts:["Recalls are scheduled by the customer","Recalls address a manufacturer-identified issue, unlike routine service","They are exactly the same thing","Maintenance is always free"], a:1}
   ];
 
+  window.DFQuizDef = writtenQuestions.map(function (x) { return { q: x.q, opts: x.opts, a: x.a }; });
   let mounted = false;
   const $ = (id) => document.getElementById(id);
   const passMark = () => DFAuth.getSettings().passPct;
@@ -194,6 +195,8 @@
 
   window.toggleQuiz = function(kind){
     const box = $(kind+"Quiz");
+    const lk = DFAuth.quizLocked("quiz_final");
+    if(box.classList.contains("hidden") && lk.locked){ alert("Your trainer allows "+lk.max+" attempt(s) for this assessment and you have used them. Ask your trainer to reset it."); return; }
     if(box.classList.contains("hidden")){
       box.innerHTML = buildQuizHTML(kind, writtenQuestions);
       box.classList.remove("hidden");
@@ -216,11 +219,14 @@
   window.submitQuiz = function(kind){
     const box = $(kind+"Quiz");
     let correct = 0;
-    writtenQuestions.forEach((item, qi)=>{
+    const answers = writtenQuestions.map((item, qi)=>{
       const picked = box.querySelector('input[name="'+kind+'_q'+qi+'"]:checked');
-      if(picked && parseInt(picked.value,10) === item.a) correct++;
+      const pi = picked ? parseInt(picked.value,10) : null;
+      const ok = pi === item.a;
+      if(ok) correct++;
+      return {q:item.q, p: pi===null ? null : item.opts[pi], c:item.opts[item.a], ok:ok};
     });
-    DFAuth.logQuiz("quiz_final", correct, writtenQuestions.length, {page:"certification"});
+    DFAuth.logQuiz("quiz_final", correct, writtenQuestions.length, {page:"certification"}, answers);
     box.classList.add("hidden");
     box.innerHTML = "";
     $(kind+"StartBtn").textContent = "Retake Assessment";

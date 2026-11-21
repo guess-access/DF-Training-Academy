@@ -52,6 +52,9 @@
 
   /* ---- API ---- */
   var pending = [];
+  // ?preview=1 (admin only): the Trainer view shows modules exactly as trainees see them, but nothing is recorded
+  var PREVIEW = /[?&]preview=1(&|$)/.test(location.search);
+  function previewOn() { return PREVIEW && !!S.user && S.user.role === "admin"; }
   function api(method, path, body, keepalive) {
     var opts = { method: method, credentials: "same-origin", headers: {} };
     if (body !== undefined) { opts.headers["content-type"] = "application/json"; opts.body = JSON.stringify(body); }
@@ -64,6 +67,7 @@
     }).catch(function () { return { error: "Network error. Check your connection and try again." }; });
   }
   function write(path, body) {
+    if (previewOn()) return Promise.resolve({ ok: true, preview: true });
     var p = api("POST", path, body, true);
     pending.push(p);
     p.then(function () { var i = pending.indexOf(p); if (i >= 0) pending.splice(i, 1); });
@@ -148,7 +152,14 @@
     });
   }
 
-  function logQuiz(quizId, score, total, extra) {
+  /** Attempt limit set by the trainer (Quiz Settings). Staff only; the server enforces it too. */
+  function quizLocked(quizId) {
+    var max = (S.settings.quizPolicy || {})[quizId] || 0;
+    if (!S.user || S.user.role === "admin" || !max) return { locked: false, max: max, used: 0 };
+    var used = S.attempts.filter(function (a) { return a.quiz === quizId && a.source !== "admin-edit"; }).length;
+    return { locked: used >= max, max: max, used: used };
+  }
+  function logQuiz(quizId, score, total, extra, answers) {
     if (!S.user) return null;
     total = total || 100;
     var pct = Math.round((score / total) * 100);
@@ -158,7 +169,7 @@
     var rec = { id: uid(), quiz: quizId, score: pct, raw: score, total: total, passed: passed, at: nowISO() };
     if (extra) rec.extra = extra;
     S.attempts.push(rec);
-    write("quiz", { quiz: quizId, raw: score, total: total, extra: extra || null });
+    write("quiz", { quiz: quizId, raw: score, total: total, extra: extra || null, answers: answers || null });
     return rec;
   }
 
@@ -178,6 +189,12 @@
     create: function (name, email, password, role) { return api("POST", "admin/create", { name: name, email: email, password: password, role: role }); },
     setPassword: function (id, password) { return api("POST", "admin/password", { id: id, password: password }); },
     aboutReset: function (id) { return api("POST", "admin/aboutreset", { id: id }); },
+    module: function (m) { return api("GET", "admin/module?m=" + encodeURIComponent(m)); },
+    saveGuide: function (m, instructions, tools) { return api("POST", "admin/guide", { module: m, instructions: instructions, tools: tools }); },
+    setAttemptLimit: function (quiz, n) { return api("POST", "admin/quizpolicy", { quiz: quiz, maxAttempts: n }); },
+    resetAttempt: function (id, quiz) { return api("POST", "admin/attemptreset", { id: id, quiz: quiz }); },
+    addNote: function (userId, m, note) { return api("POST", "admin/note", { userId: userId, module: m, note: note }); },
+    delNote: function (id) { return api("POST", "admin/notedelete", { id: id }); },
     saveSettings: function (s) {
       return api("POST", "admin/settings", s).then(function (r) {
         if (!r.error) {
@@ -203,7 +220,7 @@
     var me = S.user;
     var file = (location.pathname.split("/").pop() || "index.html").toLowerCase().replace(/\.html$/, "");
     if (file === "") file = "index";
-    var adminPages = ["admin-dashboard", "admin"];
+    var adminPages = ["admin-dashboard", "admin", "trainer"];
     if (file === "login") {
       if (me) { var n = safeNext(); location.href = n || (me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html"); }
       return;
@@ -235,7 +252,8 @@
     if (!me) return '<a href="login.html" style="font-weight:800">Login</a>';
     var dash = me.role === "admin" ? "admin-dashboard.html" : "user-dashboard.html";
     var label = me.role === "admin" ? "Admin" : "My Progress";
-    return '<a href="' + dash + '" style="font-weight:800">' + label + '</a>' +
+    return (me.role === "admin" ? '<a href="trainer.html" style="font-weight:800">Trainer View</a>' : '') +
+      '<a href="' + dash + '" style="font-weight:800">' + label + '</a>' +
       '<button type="button" id="dfLogout" class="df-logout-btn" title="Signed in as ' + esc(me.name) + '">Logout</button>';
   }
 
@@ -257,7 +275,7 @@
     safeNext: safeNext,
     reloadState: function () { return flush().then(function () { return api("GET", "state"); }).then(function (r) { if (!r.error) applyState(r); }); },
     signup: signup, login: login, logout: logout, current: currentUser,
-    trackView: trackView, markModule: markModule, logQuiz: logQuiz, logDwell: logDwell, flush: flush,
+    trackView: trackView, markModule: markModule, logQuiz: logQuiz, quizLocked: quizLocked, logDwell: logDwell, flush: flush,
     getProgress: function () { return S.user ? S.progress : null; },
     getAttempts: function () { return S.user ? S.attempts : null; },
     getUsage: function () { return S.user ? S.usage : null; },
